@@ -26,14 +26,21 @@ class XMLAnalyzer:
 
     def set_xml(self, xml_tree):
         self.xml_tree = xml_tree
+
+    def set_debug(self, debug):
+        self.debug = debug
         
     def get_xpath_value(self, query, variable):
         try:
             r = self.xml_tree.xpath(to_python(query))
             for y in r:
+                self._debug("element", repr(y))
                 for _ in unify(variable, self.query_engine.atom(y)):
                     yield False
         except lxml.etree.XPathEvalError as e:
             print("ERROR:", e)
-            pass
+
+    def _debug(self, *msg):
+        if self.debug:
+            print(" ".join(msg))
 
