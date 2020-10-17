@@ -296,30 +296,61 @@ fnd('tracing_enabled_local_only', []) :- xpath('/configuration/system.web/trace/
 % IIS
 % https://docs.microsoft.com/en-us/iis/configuration/system.webserver/
 
+% https://docs.microsoft.com/en-us/iis/configuration/system.webserver/asp/
 
+% client-side debugging, default is false
+msg('client_side_debugging_enabled', 'ISSUE: Client-side debugging enabled.').
+fnd('client_side_debugging_enabled', []) :-
+	xpath('/configuration/system.webServer/asp/@appAllowClientDebug', 'true').
+% server-side debugging, default is false
+msg('server_side_debugging_enabled', 'ISSUE: Server-side debugging enabled.').
+fnd('server_side_debugging_enabled', []) :-
+	xpath('/configuration/system.webServer/asp/@appAllowDebugging', 'true').
+
+% https://docs.microsoft.com/en-us/iis/configuration/system.webserver/asp/session
+% keepSessionIdSecure: default true
+msg('asp_keep_session_id_secure', 'ISSUE: ASP session ID not a secure cookie.').
+fnd('asp_keep_session_id_secure', []) :-
+	xpath('/configuration/system.webServer/asp/session/@keepSessionIdSecure', 'false').
+% max concurrent sessions
+msg('asp_max_concurrent_sessions', 'INFO: ASP max concurrent sessions limited to {0}.').
+fnd('asp_max_concurrent_sessions', [N]) :-
+	xpath('/configuration/system.webServer/asp/session/@max', N).
+% timeout, default 20 min
+msg('asp_session_timeout', 'INFO: ASP session timeout: {0}.').
+fnd('asp_session_timeout', [N]) :-
+	xpath('/configuration/system.webServer/asp/session/@timeout', N).
+
+% https://docs.microsoft.com/en-us/iis/configuration/system.webserver/directorybrowse
 msg('directory_browsing', 'ISSUE: Directory browsing enabled.').
 fnd('directory_browsing',[]) :- xpath('/configuration/system.webServer/directoryBrowse/@enabled', 'true').
 
-% https://docs.microsoft.com/en-us/iis/configuration/system.webserver/security/requestfiltering/
-msg('http_method_blacklist', 'WARNING: allowed/forbidden HTTP methods specified via negative validation (blacklist).').
-fnd('http_method_blacklist', []) :- xpath('/configuration/system.webServer/security/requestFiltering/verbs/@allowUnlisted', 'true').
-fnd('http_method_blacklist', []) :- \+ xpath('/configuration/system.webServer/security/requestFiltering/verbs/@allowUnlisted', _).
+% https://docs.microsoft.com/en-us/iis/configuration/system.webserver/globalmodules/
+% TODO: check for clear and remove
+msg('iis_module_installed', 'INFO: IIS module installed: {0} from {1}.').
+fnd('iis_module_installed',[M,P]) :- xpath('/configuration/system.webServer/globalModules/add', X), attr('name',M), attr('image',P).
 
-msg('trace_method_allowed', 'ISSUE: TRACE method allowed.').
-fnd('trace_method_allowed', []) :- xpath('/configuration/system.webServer/security/requestFiltering/verbs/add[@verb=\'TRACE\']/@allowed', 'true').
-fnd('trace_method_allowed', []) :-
-	fnd('http_method_blacklist', []),
-	\+ xpath('/configuration/system.webServer/security/requestFiltering/verbs/add[@verb=\'TRACE\']/@allowed', _).
+% https://docs.microsoft.com/en-us/iis/configuration/system.webserver/handlers/
+% TODO: check for clear and remove
+msg('iis_handler_enabled', 'INFO: IIS handler enabled: {0} for {1}.').
+fnd('iis_handler_enabled',[M,P]) :- xpath('/configuration/system.webServer/handlers/add', X), attr('name',M), attr('path',P).
 
-msg('http_method_allowed', 'INFO: HTTP {0} method allowed.').
-fnd('http_method_allowed', [M]) :- xpath('/configuration/system.webServer/security/requestFiltering/verbs/add[@allowed=\'true\']/@verb', M).
+% https://docs.microsoft.com/en-us/iis/configuration/system.webserver/httpcompression/
+% TODO: has some settings related to caching and compressed files: cacheControlHeader, expiresHeader, sendCacheHeaders
 
-msg('http_method_forbidden', 'INFO: HTTP {0} method forbidden.').
-fnd('http_method_forbidden', [M]) :- xpath('/configuration/system.webServer/security/requestFiltering/verbs/add[@allowed=\'false\']/@verb', M).
 
-msg('http_server_header_shown', 'ISSUE: IIS Server header shown.').
-fnd('http_server_header_shown', []) :- \+ xpath('/configuration/system.webServer/security/requestFiltering[@removeServerHeader=\'true\']', _).
+% https://docs.microsoft.com/en-us/iis/configuration/system.webserver/httperrors/
+% default is DetailedLocalOnly
+msg('iis_detailed_error_message', 'ISSUE: IIS gives detailed error messages.').
+fnd('iis_detailed_error_message',[]) :- xpath('/configuration/system.webServer/httpErrors/@errorMode', 'Detailed').
 
+% https://docs.microsoft.com/en-us/iis/configuration/system.webserver/httplogging
+% TODO: selectiveLogging, default is LogAll, dontLog, default is false
+
+% https://docs.microsoft.com/en-us/iis/configuration/system.webserver/httpprotocol/
+
+% https://docs.microsoft.com/en-us/iis/configuration/system.webserver/httpprotocol/customheaders/
+% TODO: should perhaps check for clear and remove, but who would add and then remove a header?
 has_http_custom_header_with_value(H,V) :-
 	xpath('/configuration/system.webServer/httpProtocol/customHeaders/add', X),
 	attr(X, 'name', H), attr(X, 'value', V).
@@ -346,25 +377,165 @@ http_header_removed(X) :-
 	\+ ( xpath('/configuration/system.webServer/httpProtocol/customHeaders/following-sibling::clear/add/@name', H),
 	lowercase(H,Y), lowercase(X,Y) ).
 
-msg('http_header_not_removed', 'ISSUE: HTTP header not removed:    {0}').
+msg('http_header_not_removed', 'ISSUE: HTTP header (possibly) not removed:    {0}').
 fnd('http_header_not_removed', ['X-Powered-By']) :- \+ http_header_removed('X-Powered-By').
+fnd('http_header_not_removed', ['X-AspNetMvc-Version']) :- \+ http_header_removed('X-AspNetMvc-Version').
+fnd('http_header_not_removed', ['X-AspNet-Version']) :- \+ http_header_removed('X-AspNet-Version').
+fnd('http_header_not_removed', ['Server']) :- \+ http_header_removed('Server').
 % TODO: X-AspNetMvc-Version
 % TODO: X-AspNet-Version    (also possible via other method)
 % TODO: Server
 % module: https://github.com/pingfu/iis-remove-server-headers
 
-% system.webServer/httpErrors[@errorMode='Detailed']
+% https://docs.microsoft.com/en-us/iis/configuration/system.webserver/httpprotocol/redirectheaders/
+msg('http_extra_redirect_header', 'INFO: HTTP extra redirect header:    {0}: {1}').
+fnd('http_extra_redirect_header', [H,V]) :-
+	xpath('/configuration/system.webServer/httpProtocol/redirectHeaders/add', X),
+	attr(X, 'name', H), attr(X, 'value', V).
+
+% https://docs.microsoft.com/en-us/iis/configuration/system.webserver/isapifilters/
+msg('iis_isapi_filter_enabled', 'INFO: IIS ISAPI filter {0} for {1}, enabled={2}.').
+fnd('iis_isapi_filter_enabled',[M,P,E]) :-
+	xpath('/configuration/system.webServer/isapiFilters/filter', X),
+	attr('name',M), attr('path',P), optional_attr('enabled',E,'true').
+
+% https://docs.microsoft.com/en-us/iis/configuration/system.webserver/management/
+% TODO: authentication, authorization, trustedProviders...
+
+% https://docs.microsoft.com/en-us/iis/configuration/system.webserver/modules/
+% TODO: ?
+
+% https://docs.microsoft.com/en-us/iis/configuration/system.webserver/odbclogging
+% TODO: hardcoded passwords?
+
+% https://docs.microsoft.com/en-us/iis/configuration/system.webserver/security/
+
+% https://docs.microsoft.com/en-us/iis/configuration/system.webserver/security/access
+% sslFlags: default is None
+msg('iis_ssl_disabled', 'ISSUE: IIS disables SSL.').
+fnd('iis_ssl_disabled', []) :- xpath('/configuration/system.webServer/security/access[contains(@sslFlags, \'None\')]', _), !.
+fnd('iis_ssl_disabled', []) :- \+ xpath('/configuration/system.webServer/security/access/@sslFlags', _).
+
+msg('iis_clientcert_optional', 'ISSUE: IIS client certificates are optional.').
+fnd('iis_clientcert_optional', []) :- xpath('/configuration/system.webServer/security/access[contains(@sslFlags, \'SslNegotiateCert\')]', _).
+
+msg('iis_ssl_128_bit', 'WARNING: IIS uses 128 bit SSL.').
+fnd('iis_ssl_128_bit', []) :- xpath('/configuration/system.webServer/security/access[contains(@sslFlags, \'Ssl128\')]', _).
+
+% https://docs.microsoft.com/en-us/iis/configuration/system.webserver/security/applicationdependencies/
+% TODO: ?
+
+% https://docs.microsoft.com/en-us/iis/configuration/system.webserver/security/authentication/
+% https://docs.microsoft.com/en-us/iis/configuration/system.webserver/security/authentication/anonymousauthentication
+msg('iis_anonymous_authentication', 'INFO: IIS explicit setting: anonymous authentication = {0}.').
+fnd('iis_anonymous_authentication', [E]) :- xpath('/configuration/system.webServer/security/authentication/anonymousAuthentication/@enabled', E).
+% https://docs.microsoft.com/en-us/iis/configuration/system.webserver/security/authentication/basicauthentication
+msg('iis_basic_authentication', 'INFO: IIS explicit setting: basic authentication = {0}.').
+fnd('iis_basic_authentication', [E]) :- xpath('/configuration/system.webServer/security/authentication/basicAuthentication/@enabled', E).
+% https://docs.microsoft.com/en-us/iis/configuration/system.webserver/security/authentication/clientcertificatemappingauthentication
+msg('iis_clientcert_mapping_authentication', 'INFO: IIS explicit setting: AD clientcert mapping authentication = {0}.').
+fnd('iis_clientcert_mapping_authentication', [E]) :- xpath('/configuration/system.webServer/security/authentication/clientCertificateMappingAuthentication/@enabled', E).
+% https://docs.microsoft.com/en-us/iis/configuration/system.webserver/security/authentication/digestauthentication
+msg('iis_digest_authentication', 'INFO: IIS explicit setting: digest authentication = {0}.').
+fnd('iis_digest_authentication', [E]) :- xpath('/configuration/system.webServer/security/authentication/digestAuthentication/@enabled', E).
+% https://docs.microsoft.com/en-us/iis/configuration/system.webserver/security/authentication/iisclientcertificatemappingauthentication/
+msg('iis_iis_clientcert_mapping_authentication', 'INFO: IIS explicit setting: IIS clientcert mapping authentication = {0}.').
+fnd('iis_iis_clientcert_mapping_authentication', [E]) :- xpath('/configuration/system.webServer/security/authentication/iisClientCertificateMappingAuthentication/@enabled', E).
+% https://docs.microsoft.com/en-us/iis/configuration/system.webserver/security/authentication/windowsauthentication/
+msg('iis_windows_authentication', 'INFO: IIS explicit setting: Windows (NTLM) authentication = {0}.').
+fnd('iis_windows_authentication', [E]) :- xpath('/configuration/system.webServer/security/authentication/digestAuthentication/@enabled', E).
+
+% https://docs.microsoft.com/en-us/iis/configuration/system.webserver/security/authorization/
+% TODO: this is something to check on itself
+msg('iis_authorization', 'INFO: IIS sets authorization.').
+fnd('iis_authorization', []) :- xpath('/configuration/system.webServer/security/authorization', _).
+
+% https://docs.microsoft.com/en-us/iis/configuration/system.webserver/security/dynamicipsecurity/
+% TODO: check proxy mode, this may be abused for DoS
+msg('iis_dynamic_ip_security', 'INFO: IIS sets dynamic IP security (automatic blocking).').
+fnd('iis_dynamic_ip_security', []) :- xpath('/configuration/system.webServer/security/dynamicIpSecurity', _).
+
+% https://docs.microsoft.com/en-us/iis/configuration/system.webserver/security/ipsecurity/
+msg('iis_ip_restriction', 'INFO: IIS sets IP restrictions.').
+fnd('iis_ip_restriction', []) :- xpath('/configuration/system.webServer/security/ipSecurity', _).
+
+% https://docs.microsoft.com/en-us/iis/configuration/system.webserver/security/isapicgirestriction/
+msg('iis_isapi_cgi_restriction', 'INFO: IIS sets ISAPI CGI restrictions.').
+fnd('iis_isapi_cgi_restriction', []) :- xpath('/configuration/system.webServer/security/isapiCgiRestriction', _).
+
+% https://docs.microsoft.com/en-us/iis/configuration/system.webserver/security/requestfiltering/
+msg('http_server_header_shown', 'ISSUE: IIS Server header shown.').
+fnd('http_server_header_shown', []) :- \+ xpath('/configuration/system.webServer/security/requestFiltering[@removeServerHeader=\'true\']', _).
+
+% https://docs.microsoft.com/en-us/iis/configuration/system.webserver/security/requestfiltering/alwaysallowedquerystrings/
+% TODO: check clear and remove
+msg('iis_request_filtering_allow_qs', 'INFO: Query string sequence allowed: {0}.').
+fnd('iis_request_filtering_allow_qs', [U]) :- xpath('/configuration/system.webServer/security/requestFiltering/alwaysAllowedQueryStringSequences/add/@queryString', U).
+% https://docs.microsoft.com/en-us/iis/configuration/system.webserver/security/requestfiltering/alwaysallowedurls/
+msg('iis_request_filtering_allow_url', 'INFO: URL sequence allowed: {0}.').
+fnd('iis_request_filtering_allow_url', [U]) :- xpath('/configuration/system.webServer/security/requestFiltering/alwaysAllowedUrls/add/@url', U).
+% https://docs.microsoft.com/en-us/iis/configuration/system.webserver/security/requestfiltering/denyquerystringsequences/
+msg('iis_request_filtering_deny_qs', 'INFO: Query string sequence denied: {0}.').
+fnd('iis_request_filtering_deny_qs', [U]) :- xpath('/configuration/system.webServer/security/requestFiltering/denyQueryStringSequences/add/@sequence', U).
+% https://docs.microsoft.com/en-us/iis/configuration/system.webserver/security/requestfiltering/denyurlsequences/
+msg('iis_request_filtering_deny_url', 'INFO: URL sequence denied: {0}.').
+fnd('iis_request_filtering_deny_url', [U]) :- xpath('/configuration/system.webServer/security/requestFiltering/denyUrlSequences/add/@sequence', U).
+
+% https://docs.microsoft.com/en-us/iis/configuration/system.webserver/security/requestfiltering/fileextensions/
+msg('iis_request_filtering_file_ext_denied', 'INFO: File extension denied: {0}.').
+fnd('iis_request_filtering_file_ext_denied', [U]) :- xpath('/configuration/system.webServer/security/requestFiltering/fileExtensions/add[@allowed=\'false\']/@fileExtension', U).
+msg('iis_request_filtering_file_ext_allowed', 'INFO: File extension allowed: {0}.').
+fnd('iis_request_filtering_file_ext_allowed', [U]) :- xpath('/configuration/system.webServer/security/requestFiltering/fileExtensions/add[@allowed=\'true\']/@fileExtension', U).
+
+% https://docs.microsoft.com/en-us/iis/configuration/system.webserver/security/requestfiltering/filteringrules/
+msg('iis_request_filtering_filter_rules', 'INFO: Request filtering rules active.').
+fnd('iis_request_filtering_filter_rules', []) :- xpath('/configuration/system.webServer/security/requestFiltering/filteringRules', _).
+
+% https://docs.microsoft.com/en-us/iis/configuration/system.webserver/security/requestfiltering/hiddensegments/
+msg('iis_request_filtering_hidden_segments', 'INFO: Hidden segments specified.').
+fnd('iis_request_filtering_hidden_segments', []) :- xpath('/configuration/system.webServer/security/requestFiltering/hiddenSegments', _).
+
+% https://docs.microsoft.com/en-us/iis/configuration/system.webserver/security/requestfiltering/requestlimits/
+msg('iis_request_filtering_request_limits', 'INFO: Request limits specified.').
+fnd('iis_request_filtering_request_limits', []) :- xpath('/configuration/system.webServer/security/requestFiltering/requestLimits', _).
+
+% https://docs.microsoft.com/en-us/iis/configuration/system.webserver/security/requestfiltering/verbs/
+msg('http_method_blacklist', 'WARNING: allowed/forbidden HTTP methods specified via negative validation (blacklist).').
+fnd('http_method_blacklist', []) :- xpath('/configuration/system.webServer/security/requestFiltering/verbs/@allowUnlisted', 'true').
+fnd('http_method_blacklist', []) :- \+ xpath('/configuration/system.webServer/security/requestFiltering/verbs/@allowUnlisted', _).
+
+msg('trace_method_allowed', 'ISSUE: TRACE method allowed.').
+fnd('trace_method_allowed', []) :- xpath('/configuration/system.webServer/security/requestFiltering/verbs/add[@verb=\'TRACE\']/@allowed', 'true').
+fnd('trace_method_allowed', []) :-
+	fnd('http_method_blacklist', []),
+	\+ xpath('/configuration/system.webServer/security/requestFiltering/verbs/add[@verb=\'TRACE\']/@allowed', _).
+
+msg('http_method_allowed', 'INFO: HTTP {0} method allowed.').
+fnd('http_method_allowed', [M]) :- xpath('/configuration/system.webServer/security/requestFiltering/verbs/add[@allowed=\'true\']/@verb', M).
+
+msg('http_method_forbidden', 'INFO: HTTP {0} method forbidden.').
+fnd('http_method_forbidden', [M]) :- xpath('/configuration/system.webServer/security/requestFiltering/verbs/add[@allowed=\'false\']/@verb', M).
+
+% TODO:
+% https://docs.microsoft.com/en-us/iis/configuration/system.webserver/serverruntime
+% https://docs.microsoft.com/en-us/iis/configuration/system.webserver/serversideinclude
+% https://docs.microsoft.com/en-us/iis/configuration/system.webserver/staticcontent/
+% https://docs.microsoft.com/en-us/iis/configuration/system.webserver/tracing/
+% https://docs.microsoft.com/en-us/iis/configuration/system.webserver/urlcompression
+% https://docs.microsoft.com/en-us/iis/configuration/system.webserver/validation
+% https://docs.microsoft.com/en-us/iis/configuration/system.webserver/webdav/
+
+% https://docs.microsoft.com/en-us/iis/configuration/system.webserver/websocket
+msg('iis_websockets_enabled', 'INFO: IIS enables web sockets {0}.').
+fnd('iis_websockets_enabled', ['explicitly']) :- xpath('/configuration/system.webServer/webSocket/@enabled', 'true'), !.
+% default is true
+fnd('iis_websockets_enabled', ['by default']) :- \+ xpath('/configuration/system.webServer/webSocket/@enabled', _).
 
 
 % - glimpse[@defaultRuntimePolicy="Off"]
 % - elmah
 % - unencrypted db connectionstrings
-% sessionState[@cookieless='false']
-% pages enableViewStateMac=true etc.
 % system.web/deployment[@retail='true']
-% rename cookies: system.web/sessionState/@cookieName != 'ASP.NET_SessionId'
-% configure custom error handlers
-% remove unwanted modules: system.webServer/handlers/remove/@name (see https://gist.github.com/marcbarry/47644b4a43fbfb63ef54)
 
 finding(Message, L) :- msg(E,Message) , fnd(E,L).
 q([M|L]) :- finding(M,L).
