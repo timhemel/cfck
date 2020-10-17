@@ -15,6 +15,7 @@ class XMLAnalyzer:
     def set_prolog_base_functions(self):
         self.query_engine.register_function('xpath', self.get_xpath_value)
         self.query_engine.register_function('attr', self.attr)
+        self.query_engine.register_function('optional_attr', self.optional_attr)
         self.query_engine.register_function('lowercase', self.lowercase)
         self.query_engine.register_function('version_at_least', self.version_at_least)
 
@@ -46,12 +47,21 @@ class XMLAnalyzer:
 
     def attr(self, element, key, value):
         elt = to_python(element)
-        self._debug("element", repr(elt))
+        self._debug("DEBUG: element", repr(elt))
         for k,v in elt.items():
             for x in unify(key, self.query_engine.atom(k)):
                 for y in unify(value, self.query_engine.atom(v)):
                         self._debug("DEBUG: attr: %s=%s" % (k,v))
                         yield False
+
+    def optional_attr(self, element, key, value, default):
+        # key and default need to be instantiated
+        elt = to_python(element)
+        self._debug("DEBUG: element", repr(elt))
+        v = elt.get(to_python(key), to_python(default))
+        for y in unify(value, self.query_engine.atom(v)):
+            self._debug("DEBUG: optional_attr: %s=%s" % (to_python(key),v))
+            yield False
 
     def lowercase(self, val1, val2):
         self._debug("DEBUG: lowercase: %s=%s" % (val1,val2))
