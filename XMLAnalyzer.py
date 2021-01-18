@@ -6,6 +6,8 @@ from yldprolog.engine import get_value, to_python, unify
 
 class XMLAnalyzer:
 
+    namespaces = {"re": "http://exslt.org/regular-expressions"}
+
     def __init__(self):
         self.query_engine = yldprolog.engine.YP()
         self.set_prolog_base_functions()
@@ -37,7 +39,7 @@ class XMLAnalyzer:
     def get_xpath_value(self, query, variable):
         try:
             self._debug("DEBUG: query: %s" % (to_python(query)))
-            r = self.xml_tree.xpath(to_python(query))
+            r = self.xml_tree.xpath(to_python(query), namespaces=self.namespaces)
             for y in r:
                 self._debug("DEBUG: %s = %s" % (to_python(query), repr(y)))
                 for _ in unify(variable, self.query_engine.atom(y)):
