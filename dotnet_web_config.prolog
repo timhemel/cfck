@@ -24,10 +24,19 @@
 % - https://medium.com/bugbountywriteup/security-headers-1c770105940b
 % - https://www.troyhunt.com/continuous-webconfig-security-analysis/
 
+system_web(W,'/') :- xpath('/configuration/system.web', W).
+system_web(W,Path) :- xpath('/configuration/location/system.web', W), relxpath(W, 'ancestor::location/@path', Path).
+
+
 % https://docs.microsoft.com/en-us/dotnet/api/system.web.configuration.compilationsection?view=netframework-4.8
 compilation_version(V) :- xpath('/configuration/system.web/compilation/@targetFramework', V).
 % https://docs.microsoft.com/en-us/dotnet/api/system.web.configuration.httpruntimesection?view=netframework-4.8
 runtime_version(V) :- xpath('/configuration/system.web/httpRuntime/@targetFramework', V).
+
+msg('compilation_version', 'INFO: compilation target version: {0}.').
+fnd('compilation_version', [V]) :- compilation_version(V).
+msg('runtime_version', 'INFO: runtime target version: {0}.').
+fnd('runtime_version', [V]) :- runtime_version(V).
 
 msg('version_mismatch', 'WARNING: compilation and runtime targets not the same.').
 fnd('version_mismatch', []) :- \+ ( compilation_version(V), runtime_version(V) ).
@@ -59,6 +68,15 @@ fnd('auth_forms_credentials_format', [Format]) :- xpath('/configuration/system.w
 msg('auth_cookie_mode', 'INFO: Forms authentication cookie mode: {0}.').
 fnd('auth_cookie_mode', [Mode]) :- xpath('/configuration/system.web/authentication/forms/@cookieless', Mode).
 
+msg('auth_forms_require_ssl', 'ISSUE: Forms authentication does not require SSL.').
+fnd('auth_forms_require_ssl', []) :- xpath('/configuration/system.web/authentication/forms/@requireSSL', 'false').
+
+msg('auth_forms_cookie_name', 'INFO: Forms authentication cookie name: {0}.').
+fnd('auth_forms_cookie_name', [Name]) :- xpath('/configuration/system.web/authentication/forms/@name', Name).
+
+msg('auth_forms_login_url', 'INFO: Forms authentication login URL: {0}.').
+fnd('auth_forms_login_url', [Url]) :- xpath('/configuration/system.web/authentication/forms/@loginUrl', Url).
+
 % TODO: check docs for true and false
 msg('auth_cookieless_sessions', 'ISSUE: cookieless authentication allowed/possible.').
 fnd('auth_cookieless_sessions', []) :- fnd('auth_cookie_mode', ['AutoDetect']).
@@ -67,8 +85,9 @@ fnd('auth_cookieless_sessions', []) :- fnd('auth_cookie_mode', ['UseDeviceProfil
 fnd('auth_cookieless_sessions', []) :- xpath('/configuration/system.web/authentication/forms',_), \+ fnd('auth_cookie_mode', _).
 
 % https://docs.microsoft.com/en-us/dotnet/api/system.web.configuration.authorizationsection?view=netframework-4.8
-msg('autz_mode', 'INFO: Authorizations specified.').
-fnd('autz_mode', []) :- xpath('/configuration/system.web/authorization', _).
+msg('autz_mode', 'DEBUG: INFO: authorizations specified for path {0}.').
+fnd('autz_mode', [Path]) :- system_web(W,Path), relxpath(W, 'authorization', _).
+
 
 
 % https://docs.microsoft.com/en-us/dotnet/api/system.web.configuration.httpcookiessection?view=netframework-4.8
@@ -103,7 +122,7 @@ fnd('samesite_cookie_mode', ['None']).
 % https://docs.microsoft.com/en-us/dotnet/api/system.web.configuration.httpmodulessection?view=netframework-4.8
 % ???
 msg('http_module_added', 'INFO: Extra HTTP module:    {0}: {1}.').
-fnd('http_module_added', [Name, Type]) :- xpath('/configuration/system.web/httpModule/add', X), attr('name', Name), attr('type', Type).
+fnd('http_module_added', [Name, Type]) :- xpath('/configuration/system.web/httpModule/add', X), attr(X, 'name', Name), attr(X, 'type', Type).
 
 % https://docs.microsoft.com/en-us/dotnet/api/system.web.configuration.httpruntimesection?view=netframework-4.8
 
@@ -274,7 +293,7 @@ fnd('session_regenerate_expired_sessionid', []) :- xpath('/configuration/system.
 % default: 20 minutes
 msg('session_timeout', 'INFO: session timeout: {0} minutes.').
 fnd('session_timeout', [X]) :- xpath('/configuration/system.web/sessionState/@timeout', X), !.
-fnd('session_timeout', ['20']).
+fnd('session_timeout', ['20 (default)']).
 
 % https://docs.microsoft.com/en-us/dotnet/api/system.web.configuration.sitemapsection?view=netframework-4.8
 % TODO: ?
@@ -328,12 +347,12 @@ fnd('directory_browsing',[]) :- xpath('/configuration/system.webServer/directory
 % https://docs.microsoft.com/en-us/iis/configuration/system.webserver/globalmodules/
 % TODO: check for clear and remove
 msg('iis_module_installed', 'INFO: IIS module installed: {0} from {1}.').
-fnd('iis_module_installed',[M,P]) :- xpath('/configuration/system.webServer/globalModules/add', X), attr('name',M), attr('image',P).
+fnd('iis_module_installed',[M,P]) :- xpath('/configuration/system.webServer/globalModules/add', X), attr(X, 'name',M), attr(X, 'image',P).
 
 % https://docs.microsoft.com/en-us/iis/configuration/system.webserver/handlers/
 % TODO: check for clear and remove
 msg('iis_handler_enabled', 'INFO: IIS handler enabled: {0} for {1}.').
-fnd('iis_handler_enabled',[M,P]) :- xpath('/configuration/system.webServer/handlers/add', X), attr('name',M), attr('path',P).
+fnd('iis_handler_enabled',[M,P]) :- xpath('/configuration/system.webServer/handlers/add', X), attr(X, 'name',M), attr(X, 'path',P).
 
 % https://docs.microsoft.com/en-us/iis/configuration/system.webserver/httpcompression/
 % TODO: has some settings related to caching and compressed files: cacheControlHeader, expiresHeader, sendCacheHeaders
@@ -397,7 +416,7 @@ fnd('http_extra_redirect_header', [H,V]) :-
 msg('iis_isapi_filter_enabled', 'INFO: IIS ISAPI filter {0} for {1}, enabled={2}.').
 fnd('iis_isapi_filter_enabled',[M,P,E]) :-
 	xpath('/configuration/system.webServer/isapiFilters/filter', X),
-	attr('name',M), attr('path',P), optional_attr('enabled',E,'true').
+	attr(X, 'name',M), attr(X, 'path',P), optional_attr(X, 'enabled',E,'true').
 
 % https://docs.microsoft.com/en-us/iis/configuration/system.webserver/management/
 % TODO: authentication, authorization, trustedProviders...
@@ -537,7 +556,26 @@ fnd('iis_websockets_enabled', ['by default']) :- \+ xpath('/configuration/system
 % - unencrypted db connectionstrings
 % system.web/deployment[@retail='true']
 
+
 finding(Message, L) :- msg(E,Message) , fnd(E,L).
+fnd_type(T,M,L) :- msg(T,M), fnd(T,L).
+hdr('=== {0} ===').
+
+% report_list( [h('Build information'), nl, f('compilation_version'), f('r
+
+report_build(M,['Build information']) :- hdr(M).
+report_build('',[]).
+report_build(M,L) :- fnd_type('compilation_version',M,L).
+report_build(M,L) :- fnd_type('runtime_version',M,L).
+report_build(M,L) :- fnd_type('version_mismatch',M,L).
+report_build(M,L) :- fnd_type('debug_enabled',M,L).
+
+report_errors(M,['Error handling']) :- hdr(M).
+report_errors('',[]).
+report_errors(M,L) :- fnd_type('custom_errors').
+
+% q([M|L]) :- report_build(M,L).
+% q([M|L]) :- report_errors(M,L).
 q([M|L]) :- finding(M,L).
 
 
