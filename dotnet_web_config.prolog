@@ -211,6 +211,7 @@ fnd('anti_xss_encoder_not_used', []) :- \+ xpath('/configuration/system.web/http
 % https://docs.microsoft.com/en-us/dotnet/api/system.web.configuration.machinekeysection?view=netframework-4.8
 % TODO: check default settings
 % TODO: check what other attributes mean
+% TODO: sha-1 not recommended
 msg('crypto_algorithms_authsm_hash', 'INFO: Cryptographic hash algorithm for various authentication and session management functions: {0}.').
 fnd('crypto_algorithms_authsm_hash', [X]) :- xpath('/configuration/system.web/machineKey/@validation', X).
 
@@ -555,6 +556,32 @@ fnd('iis_websockets_enabled', ['by default']) :- \+ xpath('/configuration/system
 % - elmah
 % - unencrypted db connectionstrings
 % system.web/deployment[@retail='true']
+
+% --------------------------------------
+% appsettings
+% https://docs.microsoft.com/en-us/dotnet/framework/configure-apps/file-schema/appsettings/appsettings-element-for-configuration
+msg('appsettings_sensitive_data', 'WARNING: appsettings {0} may contain sensitive information.').
+fnd('appsettings_sensitive_data', [K]) :- xpath('/configuration/appSettings/add[re:match(@key,\'.*password.*\',\'i\')]/@key',K).
+% fnd('appsettings_sensitive_data', [K]) :- xpath('/configuration/appSettings/add[contains(@key,\'password\')]',K).
+% fnd('appsettings_sensitive_data', [K]) :- xpath('/configuration/appSettings/add/@key',K).
+
+
+
+
+% --------------------------------------
+% WCF service model
+% https://docs.microsoft.com/en-us/dotnet/framework/configure-apps/file-schema/wcf/system-servicemodel
+msg('wcf_servicemodel_client', 'INFO: WCF: connects as {0} client to {1}.').
+fnd('wcf_servicemodel_client', [B,A]) :- xpath('/configuration/system.serviceModel/client/endpoint',E),
+		attr(E, 'address', A), optional_attr(E, 'binding', B, 'unknown').
+msg('wcf_servicemodel_server', 'INFO: WCF: offers {0} service at {1}.').
+fnd('wcf_servicemodel_server', [B,A]) :- xpath('/configuration/system.serviceModel/services/service/endpoint',E),
+		attr(E, 'address', A), optional_attr(E, 'binding', B, 'unknown').
+
+
+
+% --------------------------------------
+
 
 
 finding(Message, L) :- msg(E,Message) , fnd(E,L).
