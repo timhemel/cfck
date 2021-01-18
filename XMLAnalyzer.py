@@ -1,4 +1,3 @@
-
 import lxml
 import yldprolog.engine
 from yldprolog.engine import get_value, to_python, unify
@@ -14,6 +13,7 @@ class XMLAnalyzer:
 
     def set_prolog_base_functions(self):
         self.query_engine.register_function('xpath', self.get_xpath_value)
+        self.query_engine.register_function('relxpath', self.get_relxpath_value)
         self.query_engine.register_function('attr', self.attr)
         self.query_engine.register_function('optional_attr', self.optional_attr)
         self.query_engine.register_function('lowercase', self.lowercase)
@@ -44,6 +44,20 @@ class XMLAnalyzer:
                     yield False
         except lxml.etree.XPathEvalError as e:
             print("ERROR (xpath):", e, to_python(query))
+
+    def get_relxpath_value(self, element, query, variable):
+        elt = to_python(element)
+        try:
+            self._debug("DEBUG: query: %s" % (to_python(query)))
+            self._debug("DEBUG: elt: %s" % elt)
+            r = elt.xpath(to_python(query))
+            for y in r:
+                self._debug("DEBUG: %s = %s" % (to_python(query), repr(y)))
+                for _ in unify(variable, self.query_engine.atom(y)):
+                    yield False
+        except lxml.etree.XPathEvalError as e:
+            print("ERROR (relxpath):", e, to_python(query))
+
 
     def attr(self, element, key, value):
         elt = to_python(element)
