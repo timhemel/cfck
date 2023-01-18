@@ -6,6 +6,7 @@ from defusedxml.common import DefusedXmlException
 import click
 import sys
 import io
+import logging
 from yldprolog.compiler import compile_prolog_from_file
 
 from .XMLAnalyzer import XMLAnalyzer
@@ -31,6 +32,9 @@ def secure_parse(inp_fn):
 @click.argument('inp', nargs=-1, type=click.Path())
 def analyze(rules, debug, inp):
     compiled_rules = compile_prolog_from_file(rules)
+
+    if debug:
+        logging.basicConfig(level=logging.DEBUG)
 
     x = XMLAnalyzer()
     x.add_rules(compiled_rules)
