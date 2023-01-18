@@ -39,7 +39,7 @@ def analyze(rules, debug, inp):
     x = XMLAnalyzer()
     x.add_rules(compiled_rules)
     for inp_fn in inp:
-        # print(f'Processing {inp_file.name}')
+        logging.debug(f'Processing {inp_fn}')
         try:
             t = secure_parse(inp_fn)
             x.set_xml(t)
