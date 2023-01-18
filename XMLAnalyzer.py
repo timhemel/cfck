@@ -6,7 +6,8 @@ from yldprolog.engine import get_value, to_python, unify
 
 class XMLAnalyzer:
 
-    namespaces = {"re": "http://exslt.org/regular-expressions"}
+    # TODO: check if we need this
+    namespaces = { "re": "http://exslt.org/regular-expressions" }
 
     def __init__(self):
         self.query_engine = yldprolog.engine.YP()
@@ -17,6 +18,7 @@ class XMLAnalyzer:
         self.query_engine.register_function('xpath', self.get_xpath_value)
         self.query_engine.register_function('relxpath', self.get_relxpath_value)
         self.query_engine.register_function('attr', self.attr)
+        self.query_engine.register_function('text', self.text)
         self.query_engine.register_function('optional_attr', self.optional_attr)
         self.query_engine.register_function('lowercase', self.lowercase)
         self.query_engine.register_function('version_at_least', self.version_at_least)
@@ -35,8 +37,16 @@ class XMLAnalyzer:
 
     def set_debug(self, debug):
         self.debug = debug
-        
+
     def get_xpath_value(self, query, variable):
+        self._debug("DEBUG: query: %s" % (to_python(query)))
+        r = self.xml_tree.iterfind(to_python(query))
+        for y in r:
+                self._debug("DEBUG: %s = %s" % (to_python(query), repr(y)))
+                for _ in unify(variable, self.query_engine.atom(y)):
+                    yield False
+        
+    def xget_xpath_value(self, query, variable):
         try:
             self._debug("DEBUG: query: %s" % (to_python(query)))
             r = self.xml_tree.xpath(to_python(query), namespaces=self.namespaces)
@@ -77,6 +87,12 @@ class XMLAnalyzer:
         v = elt.get(to_python(key), to_python(default))
         for y in unify(value, self.query_engine.atom(v)):
             self._debug("DEBUG: optional_attr: %s=%s" % (to_python(key),v))
+            yield False
+
+    def text(self, element, value):
+        elt = to_python(element)
+        self._debug("DEBUG: element", repr(elt))
+        for x in unify(value, self.query_engine.atom(elt.text)):
             yield False
 
     def lowercase(self, val1, val2):
