@@ -7,7 +7,7 @@ from yldprolog.engine import get_value, to_python, unify
 
 class XMLAnalyzer:
 
-    # TODO: check if we need this
+    # See https://lxml.de/xpathxslt.html
     namespaces = { "re": "http://exslt.org/regular-expressions" }
 
     def __init__(self):
@@ -17,6 +17,7 @@ class XMLAnalyzer:
 
     def set_prolog_base_functions(self):
         self.query_engine.register_function('xpath', self.get_xpath_value)
+        self.query_engine.register_function('fullxpath', self.get_full_xpath_value)
         self.query_engine.register_function('relxpath', self.get_relxpath_value)
         self.query_engine.register_function('attr', self.attr)
         self.query_engine.register_function('text', self.text)
@@ -44,7 +45,7 @@ class XMLAnalyzer:
                 for _ in unify(variable, self.query_engine.atom(y)):
                     yield False
         
-    def xget_xpath_value(self, query, variable):
+    def get_full_xpath_value(self, query, variable):
         try:
             logging.debug(f'query: {to_python(query)}')
             r = self.xml_tree.xpath(to_python(query), namespaces=self.namespaces)
@@ -53,7 +54,7 @@ class XMLAnalyzer:
                 for _ in unify(variable, self.query_engine.atom(y)):
                     yield False
         except lxml.etree.XPathEvalError as e:
-            print("ERROR (xpath):", e, to_python(query))
+            logging.error(f'xpath exception {e} on query {to_python(query)}')
 
     def get_relxpath_value(self, element, query, variable):
         elt = to_python(element)
