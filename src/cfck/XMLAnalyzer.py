@@ -84,7 +84,7 @@ class XMLAnalyzer:
         logging.debug(f'element: {elt!r}')
         v = elt.get(to_python(key), to_python(default))
         for y in unify(value, self.query_engine.atom(v)):
-            logging.debug(f'optional_attr: {to_python(key)={v}')
+            logging.debug(f'optional_attr: {to_python(key)}={v}')
             yield False
 
     def text(self, element, value):

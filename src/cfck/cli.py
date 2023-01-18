@@ -43,7 +43,6 @@ def analyze(rules, debug, inp):
         try:
             t = secure_parse(inp_fn)
             x.set_xml(t)
-            x.set_debug(debug)
 
             r = x.ask('q')
 
