@@ -72,7 +72,8 @@ class XMLAnalyzer:
 
     def attr(self, element, key, value):
         elt = to_python(element)
-        logging.debug(f'elt: {elt!r}')
+        logging.debug(f'elt: {elt!r}, {key!r}, {value!r}')
+        logging.debug(elt.items())
         for k,v in elt.items():
             for x in unify(key, self.query_engine.atom(k)):
                 for y in unify(value, self.query_engine.atom(v)):
