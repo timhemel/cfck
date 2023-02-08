@@ -24,23 +24,23 @@ def sarif_finding(filename, finding_vars):
     message = finding_vars[0].format(*finding_vars[1:])
 
 
-def secure_parse(inp_fn):
-    '''this function will parse the XML with the defusedxml library to validate the input for lxml'''
+def parse_xml(inp_fn, secure):
+    '''this function will parse the XML. If secure is True, use the defusedxml library to validate the input before letting
+    lxml parse it.'''
     with open(inp_fn,'r') as inp_f:
-        try:
+        if secure:
             t = defused_etree.parse(inp_fn)
-            t = etree.parse(inp_fn)
-            return t
-        except DefusedXmlException as e:
-            raise ClickException(e)
+        t = etree.parse(inp_fn)
+        return t
 
 @click.command()
 @click.option('-r','--rules', type=click.Path())
 @click.option('-d','--debug', type=bool, is_flag=True, default=False)
 @click.option('--vim', 'outformat', is_flag=True, flag_value='vim', default=True)
 @click.option('--sarif', 'outformat', is_flag=True, flag_value='sarif')
+@click.option('--secure/--insecure', default=True, help="validate or don't validate XML with defusedxml")
 @click.argument('inp', nargs=-1, type=click.Path())
-def analyze(rules, debug, outformat, inp):
+def analyze(rules, debug, outformat, secure, inp):
     compiled_rules = compile_prolog_from_file(rules)
 
     if debug:
@@ -51,7 +51,7 @@ def analyze(rules, debug, outformat, inp):
     for inp_fn in inp:
         logging.debug(f'Processing {inp_fn}')
         try:
-            t = secure_parse(inp_fn)
+            t = parse_xml(inp_fn, secure)
             x.set_xml(t)
 
             r = x.ask('q')
@@ -65,7 +65,7 @@ def analyze(rules, debug, outformat, inp):
                     result = sarif_finding(inp_fn, y)
                     print(result)
         except DefusedXmlException as e:
-            raise click.ClickException(f'Insecure XML: {e}')
+            logging.error(f'File {inp_fn} contains insecure XML: {e}')
 
 if __name__=="__main__":
     analyze()
