@@ -13,16 +13,24 @@ from sarif_om._physical_location import PhysicalLocation
 
 from .XMLAnalyzer import XMLAnalyzer
 
+logger = logging.getLogger(__name__)
+
 def render_finding(filename, finding_vars):
     line = finding_vars[1].sourceline
     message = finding_vars[0].format(*finding_vars[1:])
     return f'{filename}:{line}:0:{message}'
 
 def sarif_finding(filename, finding_vars):
+    return 'TODO: sarif_finding'
     line = finding_vars[1].sourceline
     #location = Location(
     message = finding_vars[0].format(*finding_vars[1:])
 
+def render_plain(filename, finding_vars):
+    # line = finding_vars[1].sourceline
+    logger.debug(f'render_plain: {filename=}, {finding_vars=}')
+    message = finding_vars[0].format(*finding_vars[1:])
+    return message
 
 def parse_xml(inp_fn, secure):
     '''this function will parse the XML. If secure is True, use the defusedxml library to validate the input before letting
@@ -38,6 +46,7 @@ def parse_xml(inp_fn, secure):
 @click.option('-d','--debug', type=bool, is_flag=True, default=False)
 @click.option('--vim', 'outformat', is_flag=True, flag_value='vim', default=True)
 @click.option('--sarif', 'outformat', is_flag=True, flag_value='sarif')
+@click.option('--plain', 'outformat', is_flag=True, flag_value='plain')
 @click.option('--secure/--insecure', default=True, help="validate or don't validate XML with defusedxml")
 @click.argument('inp', nargs=-1, type=click.Path())
 def analyze(rules, debug, outformat, secure, inp):
@@ -49,23 +58,27 @@ def analyze(rules, debug, outformat, secure, inp):
     x = XMLAnalyzer()
     x.add_rules(compiled_rules)
     for inp_fn in inp:
-        logging.debug(f'Processing {inp_fn}')
+        logger.debug(f'Processing {inp_fn}')
         try:
             t = parse_xml(inp_fn, secure)
             x.set_xml(t)
 
             r = x.ask('q')
 
-            if outformat == 'vim':
-                for y in r:
-                    print(render_finding(inp_fn, y))
-            elif outformat == 'sarif':
-                print(f'TODO: {outformat}')
-                for y in r:
-                    result = sarif_finding(inp_fn, y)
-                    print(result)
+            renderers = {
+                    'vim': render_finding,
+                    'sarif': sarif_finding,
+                    'plain': render_plain
+            }
+
+            render_fun = renderers[outformat]
+
+            logger.debug(f'rendering results...')
+            for y in r:
+                print(render_fun(inp_fn, y))
+            logger.debug(f'rendered results.')
         except DefusedXmlException as e:
-            logging.error(f'File {inp_fn} contains insecure XML: {e}')
+            logger.error(f'File {inp_fn} contains insecure XML: {e}')
 
 if __name__=="__main__":
     analyze()

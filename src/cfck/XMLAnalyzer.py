@@ -4,6 +4,7 @@ import yldprolog.engine
 from yldprolog.engine import get_value, to_python, unify
 
 
+logger = logging.getLogger(__name__)
 
 class XMLAnalyzer:
 
@@ -19,6 +20,7 @@ class XMLAnalyzer:
         self.query_engine.register_function('xpath', self.get_xpath_value)
         self.query_engine.register_function('fullxpath', self.get_full_xpath_value)
         self.query_engine.register_function('relxpath', self.get_relxpath_value)
+        self.query_engine.register_function('tag', self.tag)
         self.query_engine.register_function('attr', self.attr)
         self.query_engine.register_function('text', self.text)
         self.query_engine.register_function('optional_attr', self.optional_attr)
@@ -36,67 +38,75 @@ class XMLAnalyzer:
 
     def set_xml(self, xml_tree):
         self.xml_tree = xml_tree
+        logger.debug(f'set_xml: {xml_tree =}')
+        logger.debug(f'set_xml: {xml_tree.getroot() =}')
 
     def get_xpath_value(self, query, variable):
-        logging.debug(f'query: {to_python(query)}')
+        logger.debug(f'query: {to_python(query)}')
         r = self.xml_tree.iterfind(to_python(query))
         for y in r:
-                logging.debug(f'{to_python(query)} = {y!r}')
+                logger.debug(f'{to_python(query)} = {y!r}')
                 for _ in unify(variable, self.query_engine.atom(y)):
                     yield False
         
     def get_full_xpath_value(self, query, variable):
         try:
-            logging.debug(f'query: {to_python(query)}')
+            logger.debug(f'query: {to_python(query)}')
             r = self.xml_tree.xpath(to_python(query), namespaces=self.namespaces)
             for y in r:
-                logging.debug(f'{to_python(query)} = {y!r}')
+                logger.debug(f'{to_python(query)} = {y!r}')
                 for _ in unify(variable, self.query_engine.atom(y)):
                     yield False
         except lxml.etree.XPathEvalError as e:
-            logging.error(f'xpath exception {e} on query {to_python(query)}')
+            logger.error(f'xpath exception {e} on query {to_python(query)}')
 
     def get_relxpath_value(self, element, query, variable):
         elt = to_python(element)
         try:
-            logging.debug(f'query: {to_python(query)}')
-            logging.debug(f'elt: {elt}')
+            logger.debug(f'query: {to_python(query)}')
+            logger.debug(f'elt: {elt}')
             r = elt.xpath(to_python(query))
             for y in r:
-                logging.debug(f'{to_python(query)} = {y!r}')
+                logger.debug(f'{to_python(query)} = {y!r}')
                 for _ in unify(variable, self.query_engine.atom(y)):
                     yield False
         except lxml.etree.XPathEvalError as e:
-            logging.error(f'relxpath: {e} {to_python(query)}')
+            logger.error(f'relxpath: {e} {to_python(query)}')
+
+    def tag(self, element, tagname):
+        elt = to_python(element)
+        logger.debug(f'elt: {elt!r}, {tagname!r} {elt.tag=} {dir(elt)}')
+        for y in unify(tagname, self.query_engine.atom(elt.tag)):
+            yield False
 
 
     def attr(self, element, key, value):
         elt = to_python(element)
-        logging.debug(f'elt: {elt!r}, {key!r}, {value!r}')
-        logging.debug(elt.items())
+        logger.debug(f'elt: {elt!r}, {key!r}, {value!r}')
+        logger.debug(elt.items())
         for k,v in elt.items():
             for x in unify(key, self.query_engine.atom(k)):
                 for y in unify(value, self.query_engine.atom(v)):
-                        logging.debug(f'attr: {k}={v}')
+                        logger.debug(f'attr: {k}={v}')
                         yield False
 
     def optional_attr(self, element, key, value, default):
         # key and default need to be instantiated
         elt = to_python(element)
-        logging.debug(f'element: {elt!r}')
+        logger.debug(f'element: {elt!r}')
         v = elt.get(to_python(key), to_python(default))
         for y in unify(value, self.query_engine.atom(v)):
-            logging.debug(f'optional_attr: {to_python(key)}={v}')
+            logger.debug(f'optional_attr: {to_python(key)}={v}')
             yield False
 
     def text(self, element, value):
         elt = to_python(element)
-        logging.debug(f'element: {elt!r}')
+        logger.debug(f'element: {elt!r}')
         for x in unify(value, self.query_engine.atom(elt.text)):
             yield False
 
     def lowercase(self, val1, val2):
-        logging.debug(f'lowercase: {val1}={val2}')
+        logger.debug(f'lowercase: {val1}={val2}')
         # val1 must be instantiated
         v = self.query_engine.atom(to_python(val1).lower())
         for x in unify(val2, v):
