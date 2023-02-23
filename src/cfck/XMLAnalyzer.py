@@ -15,6 +15,7 @@ class XMLAnalyzer:
         self.query_engine = yldprolog.engine.YP()
         self.set_prolog_base_functions()
         self.xml_tree = None
+        self.path = None
 
     def set_prolog_base_functions(self):
         self.query_engine.register_function('xpath', self.get_xpath_value)
@@ -24,6 +25,7 @@ class XMLAnalyzer:
         self.query_engine.register_function('attr', self.attr)
         self.query_engine.register_function('text', self.text)
         self.query_engine.register_function('optional_attr', self.optional_attr)
+        self.query_engine.register_function('nodelocation', self.node_location)
         self.query_engine.register_function('lowercase', self.lowercase)
         self.query_engine.register_function('version_at_least', self.version_at_least)
 
@@ -40,6 +42,9 @@ class XMLAnalyzer:
         self.xml_tree = xml_tree
         logger.debug(f'set_xml: {xml_tree =}')
         logger.debug(f'set_xml: {xml_tree.getroot() =}')
+
+    def set_path(self, path):
+        self.path = path
 
     def get_xpath_value(self, query, variable):
         logger.debug(f'query: {to_python(query)}')
@@ -103,6 +108,13 @@ class XMLAnalyzer:
         elt = to_python(element)
         logger.debug(f'element: {elt!r}')
         for x in unify(value, self.query_engine.atom(elt.text)):
+            yield False
+
+    def node_location(self, node, v):
+        elt = to_python(node)
+        logger.debug(f'node_location: {node=}')
+        loc = self.query_engine.atom( (self.path, (elt.sourceline,0), (elt.sourceline,0)) )
+        for x in unify(v, loc):
             yield False
 
     def lowercase(self, val1, val2):
