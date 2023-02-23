@@ -8,23 +8,23 @@ import sys
 import io
 import logging
 from yldprolog.compiler import compile_prolog_from_file
-from sarif_om._location import Location
-from sarif_om._physical_location import PhysicalLocation
+from .StdoutRenderer import StdoutRenderer
+from .SarifRenderer import SarifRenderer, sarif_finding
 
 from .XMLAnalyzer import XMLAnalyzer
 
 logger = logging.getLogger(__name__)
 
-def render_finding(filename, finding_vars):
-    line = finding_vars[1].sourceline
-    message = finding_vars[0].format(*finding_vars[1:])
-    return f'{filename}:{line}:0:{message}'
 
-def sarif_finding(filename, finding_vars):
-    return 'TODO: sarif_finding'
-    line = finding_vars[1].sourceline
-    #location = Location(
-    message = finding_vars[0].format(*finding_vars[1:])
+def quickfix_finding(filename, query_vars):
+    '''[ruleid, level, message_format, locations, *finding_vars]'''
+    rule_id = query_vars[0]
+    level = query_vars[1]
+    message = query_vars[2].format(*query_vars[4:])
+    locations = [ f'{path}:{startloc[0]}:{startloc[1]}' for path, startloc, endloc in query_vars[3] ]
+    if locations == []:
+        return None  # No use reporting quickfix without location
+    return f'{locations[0]}:{level}:{rule_id}:{message}'
 
 def render_plain(filename, finding_vars):
     # line = finding_vars[1].sourceline
@@ -57,28 +57,31 @@ def analyze(rules, debug, outformat, secure, inp):
 
     x = XMLAnalyzer()
     x.add_rules(compiled_rules)
+    renderers = {
+            'vim': StdoutRenderer(quickfix_finding),
+            'sarif': SarifRenderer(sarif_finding),
+            'plain': StdoutRenderer(render_plain)
+    }
+    renderer = renderers[outformat]
+
+    renderer.begin()
+
     for inp_fn in inp:
         logger.debug(f'Processing {inp_fn}')
         try:
             t = parse_xml(inp_fn, secure)
             x.set_xml(t)
+            x.set_path(inp_fn)
 
             r = x.ask('q')
 
-            renderers = {
-                    'vim': render_finding,
-                    'sarif': sarif_finding,
-                    'plain': render_plain
-            }
-
-            render_fun = renderers[outformat]
-
             logger.debug(f'rendering results...')
-            for y in r:
-                print(render_fun(inp_fn, y))
+            renderer.feed(inp_fn, r)
             logger.debug(f'rendered results.')
         except DefusedXmlException as e:
             logger.error(f'File {inp_fn} contains insecure XML: {e}')
+
+    renderer.end()
 
 if __name__=="__main__":
     analyze()
