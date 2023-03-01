@@ -1,0 +1,3 @@
+class CfckException(Exception):
+    pass
+
