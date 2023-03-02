@@ -20,6 +20,8 @@ class SarifAnalyzer:
     def set_prolog_base_functions(self):
         self.query_engine.register_function('sarif_result', self.sarif_result)
         self.query_engine.register_function('sarif_locations', self.sarif_locations)
+        self.query_engine.register_function('sarif_message', self.sarif_message)
+        self.query_engine.register_function('sarif_level', self.sarif_level)
 
     def add_rules(self, compiled_rules):
         self.query_engine.load_script_from_string(compiled_rules, overwrite=False)
@@ -51,16 +53,16 @@ class SarifAnalyzer:
     def sarif_locations_to_prolog(self, locations):
         def location_to_prolog(location):
             logger.debug(f'{location=}')
-            uri = location['artifact_location']['uri']
-            region = location['region']
+            uri = location['physicalLocation']['artifactLocation']['uri']
+            region = location['physicalLocation']['region']
             loc = self.query_engine.makelist([ self.query_engine.atom(uri),
                 self.query_engine.makelist([
-                    self.query_engine.atom(region['start_line']),
-                    self.query_engine.atom(region['start_column'])
+                    self.query_engine.atom(region['startLine']),
+                    self.query_engine.atom(region['startColumn'])
                 ]),
                 self.query_engine.makelist([
-                    self.query_engine.atom(region['end_line']),
-                    self.query_engine.atom(region['end_column'])
+                    self.query_engine.atom(region['endLine']),
+                    self.query_engine.atom(region['endColumn'])
                 ])])
             return loc
         locs = self.query_engine.makelist([location_to_prolog(l) for l in locations])
@@ -72,7 +74,7 @@ class SarifAnalyzer:
         for index, result in enumerate(self.results):
             logger.debug(f'sarif_result: {index},{result=}')
             for y in unify(result_index, self.query_engine.atom(index)):
-                rule_id = result['rule_id']
+                rule_id = result['ruleId']
                 logger.debug(f'sarif_result: {rule_id=}')
                 for x in unify(rule, self.query_engine.atom(rule_id)):
                     logger.debug(f'sarif_result: match {rule_id=}')
@@ -87,6 +89,26 @@ class SarifAnalyzer:
                 logger.debug(f'sarif_locations: {locs=} {locations=} {self.query_engine.atom(locations)=}')
                 for x in unify(locations, locs):
                     yield False
+
+    def sarif_message(self, result_index, message):
+        logger.debug(f'sarif_message')
+        for index, result in enumerate(self.results):
+            logger.debug(f'sarif_message: {index},{result=}')
+            for y in unify(result_index, self.query_engine.atom(index)):
+                # TODO:decide how to handle formatting
+                msg = result['message']['text']
+                for x in unify(message, self.query_engine.atom(msg)):
+                    yield False
+
+    def sarif_level(self, result_index, level):
+        logger.debug(f'sarif_level')
+        for index, result in enumerate(self.results):
+            logger.debug(f'sarif_level: {index},{result=}')
+            for y in unify(result_index, self.query_engine.atom(index)):
+                lvl = result['level']
+                for x in unify(level, self.query_engine.atom(lvl)):
+                    yield False
+
 
     def get_xpath_value(self, query, variable):
         logger.debug(f'query: {to_python(query)}')
