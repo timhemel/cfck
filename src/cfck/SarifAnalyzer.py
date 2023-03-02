@@ -58,11 +58,11 @@ class SarifAnalyzer:
             loc = self.query_engine.makelist([ self.query_engine.atom(uri),
                 self.query_engine.makelist([
                     self.query_engine.atom(region['startLine']),
-                    self.query_engine.atom(region['startColumn'])
+                    self.query_engine.atom(region.get('startColumn',0))
                 ]),
                 self.query_engine.makelist([
                     self.query_engine.atom(region['endLine']),
-                    self.query_engine.atom(region['endColumn'])
+                    self.query_engine.atom(region.get('endColumn',0))
                 ])])
             return loc
         locs = self.query_engine.makelist([location_to_prolog(l) for l in locations])
@@ -105,7 +105,7 @@ class SarifAnalyzer:
         for index, result in enumerate(self.results):
             logger.debug(f'sarif_level: {index},{result=}')
             for y in unify(result_index, self.query_engine.atom(index)):
-                lvl = result['level']
+                lvl = result.get('level', 'warning')
                 for x in unify(level, self.query_engine.atom(lvl)):
                     yield False
 
