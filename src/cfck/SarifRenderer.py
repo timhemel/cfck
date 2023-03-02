@@ -19,7 +19,7 @@ def rename_schema_field(a):
         return a.name
 
 def to_schema_fields_unstructure(cls):
-    return make_dict_unstructure_fn(cls, converter, _cattrs_omit_if_default=True, **{
+    return make_dict_unstructure_fn(cls, converter, **{
         a.name: override(rename=rename_schema_field(a)) for a in fields(cls)
     })
 
