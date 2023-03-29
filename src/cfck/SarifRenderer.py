@@ -86,6 +86,14 @@ def sarif_finding(sarif_log, filename, query_vars):
     result = Result(rule_id=rule_id, level=level, message=Message(text=message), locations=locations, kind=None)
     return result
 
+def sarif_update_toolname(sarif_log, values):
+    sarif_log.runs[0].tool.driver.name = values[0]
+    return sarif_log
+
+def sarif_update_toolversion(sarif_log, values):
+    sarif_log.runs[0].tool.driver.version = values[0]
+    return sarif_log
+
 def sarif_update_ruleid(sarifresult, values):
     '''ruleid(RuleId), where RuleId is a string'''
     sarifresult.rule_id = values[0]
@@ -133,6 +141,8 @@ def sarif_update_codeflow(sarifresult, values):
     return sarifresult
 
 sarif_log_updater = {
+        'toolname': sarif_update_toolname,
+        'toolversion': sarif_update_toolversion,
 }
 
 sarif_result_updater = {
@@ -165,6 +175,7 @@ def structured_sarif_finding(sarif_log, filename, query_vars):
         else:
             logger.warn(f'structured_sarif_finding: do not know how to handle query_value {qv!r}')
     logger.debug(f'structured_sarif_finding: appending result {result}')
-    sarif_log.runs[0].results.append(result)
+    if result.message is not None:
+        sarif_log.runs[0].results.append(result)
     return sarif_log
 
