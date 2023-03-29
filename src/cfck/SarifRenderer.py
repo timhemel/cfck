@@ -106,7 +106,7 @@ def sarif_update_kind(sarifresult, values):
 def sarif_update_message(sarifresult, values):
     '''message(Message,Args), where Message is a message template containing placeholders, in which the values of Args are substituted'''
     # TODO: support more complex message formats (templates, markdown, etc)
-    text = values[0].format(values[1])
+    text = values[0].format(*values[1])
     sarifresult.message = Message(text=text)
     return sarifresult
 
