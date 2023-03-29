@@ -87,7 +87,8 @@ class XMLAnalyzer:
         try:
             logger.debug(f'query: {to_python(query)}')
             logger.debug(f'elt: {elt}')
-            r = elt.xpath(to_python(query))
+            # r = elt.xpath(to_python(query))
+            r = elt.iterfind(to_python(query))
             for y in r:
                 logger.debug(f'{to_python(query)} = {y!r}')
                 for _ in unify(variable, self.query_engine.atom(y)):
