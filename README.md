@@ -37,8 +37,8 @@ The argument of `q` is a list of Prolog functors containing values. The reporter
 
 | functor | scope| explanation | notes |
 | ------- | -----| ----------- | ----- |
-| toolname(Name) | log | Name is a string | |
-| toolversion(Version) | log | Version is a string | |
+| toolname(Name) | log | Name is a string | ignored by quickfix |
+| toolversion(Version) | log | Version is a string | ignored by quickfix |
 | ruleid(RuleId) | result | RuleId is a string | |
 | level(Level)  | result| Level is a string representing a valid SARIF level | quickfix translates this |
 | kind(Kind)  | result| Kind is a string representing a valid SARIF kind | quickfix translates this |
