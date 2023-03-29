@@ -6,7 +6,7 @@ from attrs import asdict
 from attrs import has, fields
 import cattrs
 from cattrs.gen import make_dict_unstructure_fn, override
-from sarif_om import SarifLog, Run, Tool, ToolComponent, Result, PhysicalLocation, ArtifactLocation, Region, ReportingDescriptor, Message
+from sarif_om import SarifLog, Run, Tool, ToolComponent, Result, PhysicalLocation, ArtifactLocation, Region, ReportingDescriptor, Message, CodeFlow, ThreadFlow
 
 from .BaseRenderer import BaseRenderer
 
@@ -47,7 +47,10 @@ class SarifRenderer(BaseRenderer):
         self.sarif_log = SarifLog(runs=[run],version='2.1.0')
 
     def feed(self, filename, iterator):
-        self.sarif_log.runs[0].results += [ self.render_func(filename, finding_vars) for finding_vars in iterator ]
+        #self.sarif_log.runs[0].results += [ self.render_func(self.sarif_log, filename, finding_vars) for finding_vars in iterator ]
+        for finding_vars in iterator:
+            self.sarif_log = self.render_func(self.sarif_log, filename, finding_vars)
+        #self.sarif_log.runs[0].results += [ self.render_func(self.sarif_log, filename, finding_vars) for finding_vars in iterator ]
 
     def add_rules(self):
         for run in self.sarif_log.runs:
@@ -71,8 +74,9 @@ def sarif_location(path, startloc, endloc):
     logger.debug(f'sarif_location: {loc=}')
     return loc
 
-def sarif_finding(filename, query_vars):
-    '''query_vars is a list that must contain [ruleid, level, message_format, locations, *finding_vars]'''
+def sarif_finding(sarif_log, filename, query_vars):
+    ''' OBSOLETE.
+    query_vars is a list that must contain [ruleid, level, message_format, locations, *finding_vars]'''
     # TODO: decide whether filename is still needed
     logger.debug(f'sarif_finding: {filename}, {query_vars!r}')
     rule_id = query_vars[0]
@@ -84,4 +88,85 @@ def sarif_finding(filename, query_vars):
     result = Result(rule_id=rule_id, level=level, message=Message(text=message), locations=locations, kind=None)
     return result
 
+def sarif_update_ruleid(sarifresult, values):
+    '''ruleid(RuleId), where RuleId is a string'''
+    sarifresult.rule_id = values[0]
+    return sarifresult
+
+def sarif_update_level(sarifresult, values):
+    '''level(Level), where Level is a string representing a valid SARIF level'''
+    sarifresult.level = values[0]
+    return sarifresult
+
+def sarif_update_kind(sarifresult, values):
+    '''kind(Kind), where Kind is a string representing a valid SARIF kind'''
+    sarifresult.kind = values[0]
+    return sarifresult
+
+def sarif_update_message(sarifresult, values):
+    '''message(Message,Args), where Message is a message template containing placeholders, in which the values of Args are substituted'''
+    # TODO: support more complex message formats (templates, markdown, etc)
+    text = values[0].format(values[1])
+    sarifresult.message = Message(text=text)
+    return sarifresult
+
+def sarif_update_locations(sarifresult, values):
+    '''locations(Locations), where Locations is a list of lists:
+    [ [FileName,[StartLine,StartCol],[EndLine,EndCol]], ... ]
+    '''
+    logger.debug(f'sarif_update_locations: {values[0]=}')
+    sarifresult.locations = [ sarif_location(*loc) for loc in values[0] ]
+    return sarifresult
+
+def sarif_update_codeflow(sarifresult, values):
+    '''codeflow(Locations), where Locations is a list of lists:
+    [ [FileName,[StartLine,StartCol],[EndLine,EndCol]], ... ]
+
+    Only supports one codeflow, with one threadflow. To add more flows, use
+    this functor more than once. Does not support messages with the locations,
+    threadflows or codeflow.
+    '''
+    # TODO: supports only locations, no messages
+    locations = [ sarif_location(*loc) for loc in values[0] ]
+    threadflow = ThreadFlow(locations=locations)
+    if sarifresult.code_flows is None:
+        sarifresult.code_flows = []
+    sarifresult.code_flows.append(CodeFlow(thread_flows = [threadflow]))
+    return sarifresult
+
+sarif_log_updater = {
+}
+
+sarif_result_updater = {
+        'ruleid': sarif_update_ruleid,
+        'message': sarif_update_message,
+        'locations': sarif_update_locations,
+        'kind': sarif_update_kind,
+        'level': sarif_update_level,
+        'codeflow': sarif_update_codeflow,
+}
+
+def structured_sarif_finding(sarif_log, filename, query_vars):
+    '''query_vars is a list that contains functors'''
+    # TODO: decide whether filename is still needed
+    logger.debug(f'structured_sarif_finding: {filename}, {query_vars!r}')
+    result = Result(message=None)
+    for qv in query_vars:
+        if isinstance(qv,tuple):
+            key,values = qv
+            try:
+                log_upd = sarif_log_updater[key]
+                sarif_log = log_upd(sarif_log, values)
+            except KeyError:
+                pass
+            try:
+                res_upd = sarif_result_updater[key]
+                result = res_upd(result, values)
+            except KeyError:
+                logger.warn(f'structured_sarif_finding: no handler for key {key}')
+        else:
+            logger.warn(f'structured_sarif_finding: do not know how to handle query_value {qv!r}')
+    logger.debug(f'structured_sarif_finding: appending result {result}')
+    sarif_log.runs[0].results.append(result)
+    return sarif_log
 

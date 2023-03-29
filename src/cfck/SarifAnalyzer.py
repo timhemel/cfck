@@ -22,6 +22,7 @@ class SarifAnalyzer:
         self.query_engine.register_function('sarif_locations', self.sarif_locations)
         self.query_engine.register_function('sarif_message', self.sarif_message)
         self.query_engine.register_function('sarif_level', self.sarif_level)
+        self.query_engine.register_function('sarif_kind', self.sarif_kind)
 
     def add_rules(self, compiled_rules):
         self.query_engine.load_script_from_string(compiled_rules, overwrite=False)
@@ -98,6 +99,15 @@ class SarifAnalyzer:
                 # TODO:decide how to handle formatting
                 msg = result['message']['text']
                 for x in unify(message, self.query_engine.atom(msg)):
+                    yield False
+
+    def sarif_kind(self, result_index, kind):
+        logger.debug(f'sarif_kind')
+        for index, result in enumerate(self.results):
+            logger.debug(f'sarif_kind: {index},{result=}')
+            for y in unify(result_index, self.query_engine.atom(index)):
+                knd = result.get('kind', 'fail')
+                for x in unify(kind, self.query_engine.atom(knd)):
                     yield False
 
     def sarif_level(self, result_index, level):

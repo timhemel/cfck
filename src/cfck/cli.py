@@ -7,7 +7,7 @@ import pathlib
 import logging
 from yldprolog.compiler import compile_prolog_from_file
 from .StdoutRenderer import StdoutRenderer
-from .SarifRenderer import SarifRenderer, sarif_finding
+from .SarifRenderer import SarifRenderer, sarif_finding, structured_sarif_finding
 from .exception import CfckException
 
 from .XMLAnalyzer import XMLAnalyzer
@@ -25,6 +25,33 @@ def quickfix_finding(filename, query_vars):
     if locations == []:
         return None  # No use reporting quickfix without location
     return f'{locations[0]}:{level}:{rule_id}:{message}'
+
+def sarif_importance(kind, level):
+    if level in ['error','warning','note']:
+        return level
+    if kind in ['informational','notApplicable','pass']:
+        return 'note'
+    if kind in ['open','review']:
+        return 'warning'
+    return 'warning'
+
+def structured_quickfix_finding(filename, query_vars):
+    '''query_vars is a list that contains functors'''
+    qv_dict = dict(query_vars)
+    logger.debug(f'structured_quickfix_finding: {filename}, {qv_dict}')
+    rule_id = qv_dict.get('ruleid',['missing_rule'])[0]
+    level = qv_dict.get('level',[''])[0]
+    kind = qv_dict.get('kind',[''])[0]
+    importance = sarif_importance(kind, level)
+
+    message = qv_dict.get('message',('',[])) # format(*query_vars[4:])
+    message_string = message[0].format(message[1])
+    logger.debug(f'structured_quickfix_finding: locs = {qv_dict.get("locations")}')
+    locs = qv_dict.get('locations', [[]])[0]
+    locations = [ f'{path}:{startloc[0]}:{startloc[1]}' for path, startloc, endloc in locs ]
+    if locations == []:
+        return None  # No use reporting quickfix without location
+    return f'{locations[0]}:{importance}:{rule_id}:{message_string}'
 
 def render_plain(filename, finding_vars):
     # line = finding_vars[1].sourceline
@@ -67,8 +94,8 @@ def analyze(ctx, analyzer, rules, debug, outformat, secure, inp):
     analysis.add_rules(compiled_rules)
 
     renderers = {
-            'vim': StdoutRenderer(quickfix_finding),
-            'sarif': SarifRenderer(sarif_finding),
+            'vim': StdoutRenderer(structured_quickfix_finding),
+            'sarif': SarifRenderer(structured_sarif_finding),
             'plain': StdoutRenderer(render_plain)
     }
     renderer = renderers[outformat]
