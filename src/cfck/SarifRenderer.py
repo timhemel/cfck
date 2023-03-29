@@ -47,10 +47,8 @@ class SarifRenderer(BaseRenderer):
         self.sarif_log = SarifLog(runs=[run],version='2.1.0')
 
     def feed(self, filename, iterator):
-        #self.sarif_log.runs[0].results += [ self.render_func(self.sarif_log, filename, finding_vars) for finding_vars in iterator ]
         for finding_vars in iterator:
             self.sarif_log = self.render_func(self.sarif_log, filename, finding_vars)
-        #self.sarif_log.runs[0].results += [ self.render_func(self.sarif_log, filename, finding_vars) for finding_vars in iterator ]
 
     def add_rules(self):
         for run in self.sarif_log.runs:
