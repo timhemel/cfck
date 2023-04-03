@@ -45,7 +45,7 @@ def structured_quickfix_finding(filename, query_vars):
     importance = sarif_importance(kind, level)
 
     message = qv_dict.get('message',('',[])) # format(*query_vars[4:])
-    message_string = message[0].format(message[1])
+    message_string = message[0].format(*message[1])
     logger.debug(f'structured_quickfix_finding: locs = {qv_dict.get("locations")}')
     locs = qv_dict.get('locations', [[]])[0]
     locations = [ f'{path}:{startloc[0]}:{startloc[1]}' for path, startloc, endloc in locs ]
