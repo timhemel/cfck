@@ -56,14 +56,18 @@ class SarifAnalyzer:
             logger.debug(f'{location=}')
             uri = location['physicalLocation']['artifactLocation']['uri']
             region = location['physicalLocation']['region']
+            startline = region.get('startLine', 1)
+            startcolumn = region.get('startColumn',0)
+            endcolumn = region.get('endColumn',0)
+            endline = region.get('endLine', startline)
             loc = self.query_engine.makelist([ self.query_engine.atom(uri),
                 self.query_engine.makelist([
-                    self.query_engine.atom(region['startLine']),
-                    self.query_engine.atom(region.get('startColumn',0))
+                    self.query_engine.atom(startline),
+                    self.query_engine.atom(startcolumn)
                 ]),
                 self.query_engine.makelist([
-                    self.query_engine.atom(region['endLine']),
-                    self.query_engine.atom(region.get('endColumn',0))
+                    self.query_engine.atom(endline),
+                    self.query_engine.atom(endcolumn)
                 ])])
             return loc
         locs = self.query_engine.makelist([location_to_prolog(l) for l in locations])
