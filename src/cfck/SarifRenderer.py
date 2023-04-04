@@ -79,7 +79,10 @@ def sarif_finding(sarif_log, filename, query_vars):
     logger.debug(f'sarif_finding: {filename}, {query_vars!r}')
     rule_id = query_vars[0]
     level = query_vars[1]
-    message = query_vars[2].format(*query_vars[4:])
+    try:
+        message = query_vars[2].format(*query_vars[4:])
+    except KeyError:
+        message = query_vars[2]
     locations = [ sarif_location(*loc) for loc in query_vars[3] ]
     logger.debug(f'{locations=}')
     # TODO: kind
@@ -112,7 +115,10 @@ def sarif_update_kind(sarifresult, values):
 def sarif_update_message(sarifresult, values):
     '''message(Message,Args), where Message is a message template containing placeholders, in which the values of Args are substituted'''
     # TODO: support more complex message formats (templates, markdown, etc)
-    text = values[0].format(*values[1])
+    try:
+        text = values[0].format(*values[1])
+    except KeyError:
+        text = values[0]
     sarifresult.message = Message(text=text)
     return sarifresult
 

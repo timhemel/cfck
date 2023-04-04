@@ -20,7 +20,10 @@ def quickfix_finding(filename, query_vars):
     '''[ruleid, level, message_format, locations, *finding_vars]'''
     rule_id = query_vars[0]
     level = query_vars[1]
-    message = query_vars[2].format(*query_vars[4:])
+    try:
+        message = query_vars[2].format(*query_vars[4:])
+    except KeyError:
+        message = query_vars[2]
     locations = [ f'{path}:{startloc[0]}:{startloc[1]}' for path, startloc, endloc in query_vars[3] ]
     if locations == []:
         return None  # No use reporting quickfix without location
@@ -45,7 +48,10 @@ def structured_quickfix_finding(filename, query_vars):
     importance = sarif_importance(kind, level)
 
     message = qv_dict.get('message',('',[])) # format(*query_vars[4:])
-    message_string = message[0].format(*message[1])
+    try:
+        message_string = message[0].format(*message[1])
+    except KeyError:
+        message_string = message[0]
     logger.debug(f'structured_quickfix_finding: locs = {qv_dict.get("locations")}')
     locs = qv_dict.get('locations', [[]])[0]
     locations = [ f'{path}:{startloc[0]}:{startloc[1]}' for path, startloc, endloc in locs ]
