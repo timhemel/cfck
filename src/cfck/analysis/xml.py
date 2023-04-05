@@ -8,6 +8,7 @@ from yldprolog.engine import get_value, to_python, unify
 from cfck.exception import CfckException
 from cfck.base_analyzer import BaseAnalyzer
 from cfck.finding_analyzer import FindingAnalyzer
+from cfck.single_file_analyzer import SingleFileAnalyzer
 
 logger = logging.getLogger(__name__)
 
@@ -19,7 +20,7 @@ def parse_xml(inp_fn, secure):
     t = etree.parse(str(inp_fn))
     return t
 
-class XMLAnalyzer(BaseAnalyzer, FindingAnalyzer):
+class XMLAnalyzer(BaseAnalyzer, FindingAnalyzer, SingleFileAnalyzer):
 
     # See https://lxml.de/xpathxslt.html
     namespaces = { "re": "http://exslt.org/regular-expressions" }

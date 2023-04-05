@@ -1,6 +1,7 @@
 import logging
 from .stdout_renderer import StdoutRenderer, structured_quickfix_finding, render_plain
 from .sarif_renderer import SarifRenderer, sarif_log_updater, sarif_result_updater, structured_sarif_finding
+from cfck.exception import CfckException
 
 logger = logging.getLogger(__name__)
 
@@ -28,5 +29,5 @@ class FindingAnalyzer:
         outformat = ctx.params['outformat']
         self.renderer = choose_finding_renderer(outformat)
         if self.renderer is None:
-            raise CfckException('Renderer {outformat} is not supported by this analyzer.')
+            raise CfckException(f'Renderer {outformat} is not supported by this analyzer.')
 

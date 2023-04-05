@@ -7,11 +7,12 @@ from yldprolog.engine import get_value, to_python, unify
 from cfck.exception import CfckException
 from cfck.base_analyzer import BaseAnalyzer
 from cfck.finding_analyzer import FindingAnalyzer
+from cfck.single_file_analyzer import SingleFileAnalyzer
 
 
 logger = logging.getLogger(__name__)
 
-class SarifAnalyzer(BaseAnalyzer, FindingAnalyzer):
+class SarifAnalyzer(BaseAnalyzer, FindingAnalyzer, SingleFileAnalyzer):
 
     def __init__(self, ctx):
         super().__init__(ctx)
@@ -32,15 +33,10 @@ class SarifAnalyzer(BaseAnalyzer, FindingAnalyzer):
 
     def parse_input(self, path):
         # TODO: sariffile set via *paths
-        #help(sarif.sarif_file.SarifFile)
         with path.open('r') as infile:
             data = json.load(infile)
         self.sarif_file = SarifFile(path, data)
-        # print(self.sarif_file.get_file_name())
-        #print(self.sarif_file.get_records())
         self.results = self.sarif_file.get_results()
-        #print(self.results)
-        #print(self.sarif_file.get_distinct_tool_names())
 
     def ask(self, query):
         v = self.query_engine.variable()
