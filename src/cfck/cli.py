@@ -2,9 +2,12 @@
 
 import click
 import sys
+import os
 import io
 import pathlib
 import logging
+import importlib
+import importlib.resources
 from yldprolog.compiler import compile_prolog_from_file
 from .StdoutRenderer import StdoutRenderer
 from .SarifRenderer import SarifRenderer, sarif_finding, structured_sarif_finding
@@ -65,6 +68,40 @@ def render_plain(filename, finding_vars):
     message = finding_vars[0].format(*finding_vars[1:])
     return message
 
+def load_analyzer_module_from_path(module_path):
+    spec=importlib.util.spec_from_file_location('analyzer',module_path)
+    analyzer_module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(analyzer_module)
+    return analyzer_module
+
+
+def check_module_path(path):
+    if path.suffix != '.py':
+        path = path.with_suffix('.py')
+    if path.exists():
+        return path
+    return None
+
+def get_analyzer_module(analyzer):
+    # get analyzer from a file
+    module_path = check_module_path(pathlib.Path(analyzer))
+    if module_path is not None:
+        return load_analyzer_module_from_path(module_path)
+    # get it from the configured path
+    cfck_module_path = os.environ.get('CFCK_ANALYZERS_PATH')
+    if cfck_module_path is not None:
+        for search_dir in cfck_module_path.split(':'):
+            module_path = check_module_path(pathlib.Path(search_dir) / analyzer)
+            if module_path is not None:
+                return load_analyzer_module_from_path(module_path)
+    # get it from the built-in path
+    try:
+        module = importlib.import_module(f'cfck.analysis.{analyzer}')
+        return module
+    except ModuleNotFoundError:
+        pass
+    return None
+
 
 analyzers = {
         'xml': XMLAnalyzer,
@@ -89,11 +126,14 @@ def analyze(ctx, analyzer, rules, debug, outformat, secure, inp):
     compiled_rules = compile_prolog_from_file(rules)
     logger.debug(f'compiled rules from file {rules}')
 
-    try:
-        analysis = analyzers[analyzer](ctx)
-        logger.debug(f'Using analyzer {analyzer}')
-    except KeyError as e:
+    analyzer_module = get_analyzer_module(analyzer)
+
+    if analyzer_module is None:
         raise click.ClickException(f'Could not find analyzer: {analyzer}')
+
+    analysis = analyzer_module.create_analyzer(ctx)
+
+    logger.debug(f'Using analyzer {analyzer}')
 
     #x = XMLAnalyzer()
     #x.add_rules(compiled_rules)
