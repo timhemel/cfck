@@ -1,6 +1,6 @@
 import logging
-from .StdoutRenderer import StdoutRenderer, structured_quickfix_finding, render_plain
-from .SarifRenderer import SarifRenderer, sarif_log_updater, sarif_result_updater, structured_sarif_finding
+from .stdout_renderer import StdoutRenderer, structured_quickfix_finding, render_plain
+from .sarif_renderer import SarifRenderer, sarif_log_updater, sarif_result_updater, structured_sarif_finding
 
 logger = logging.getLogger(__name__)
 
