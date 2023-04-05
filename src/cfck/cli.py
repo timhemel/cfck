@@ -9,8 +9,6 @@ import logging
 import importlib
 import importlib.resources
 from yldprolog.compiler import compile_prolog_from_file
-from .StdoutRenderer import StdoutRenderer
-from .SarifRenderer import SarifRenderer, sarif_finding
 from .exception import CfckException
 
 logger = logging.getLogger(__name__)
@@ -34,7 +32,6 @@ def load_analyzer_module_from_path(module_path):
     analyzer_module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(analyzer_module)
     return analyzer_module
-
 
 def check_module_path(path):
     if path.suffix != '.py':
