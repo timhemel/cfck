@@ -6,7 +6,8 @@ import logging
 import yldprolog.engine
 from yldprolog.engine import get_value, to_python, unify
 from cfck.exception import CfckException
-
+from cfck.base_analyzer import BaseAnalyzer
+from cfck.finding_analyzer import FindingAnalyzer
 
 logger = logging.getLogger(__name__)
 
@@ -18,19 +19,22 @@ def parse_xml(inp_fn, secure):
     t = etree.parse(str(inp_fn))
     return t
 
-class XMLAnalyzer:
+class XMLAnalyzer(BaseAnalyzer, FindingAnalyzer):
 
     # See https://lxml.de/xpathxslt.html
     namespaces = { "re": "http://exslt.org/regular-expressions" }
 
     def __init__(self, ctx):
-        self.query_engine = yldprolog.engine.YP()
-        self.set_prolog_base_functions()
+        super().__init__(ctx)
         self.xml_tree = None
-        self.secure = ctx.params['secure']
+        self.insecure = ctx.params['options'].get('insecure',False)
         self.path = None
 
+    def choose_renderer(self, ctx):
+        super().choose_renderer(ctx)
+
     def set_prolog_base_functions(self):
+        super().set_prolog_base_functions()
         self.query_engine.register_function('xpath', self.get_xpath_value)
         self.query_engine.register_function('fullxpath', self.get_full_xpath_value)
         self.query_engine.register_function('relxpath', self.get_relxpath_value)
@@ -42,12 +46,9 @@ class XMLAnalyzer:
         self.query_engine.register_function('lowercase', self.lowercase)
         self.query_engine.register_function('version_at_least', self.version_at_least)
 
-    def add_rules(self, compiled_rules):
-        self.query_engine.load_script_from_string(compiled_rules, overwrite=False)
-
     def parse_input(self, path):
         try:
-            t = parse_xml(path, self.secure)
+            t = parse_xml(path, not self.insecure)
             self.set_xml(t)
             self.path = str(path)
         except DefusedXmlException as e:
@@ -151,4 +152,3 @@ class XMLAnalyzer:
 
 def create_analyzer(ctx):
     return XMLAnalyzer(ctx)
-    pass

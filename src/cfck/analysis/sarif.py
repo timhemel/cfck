@@ -5,27 +5,30 @@ import logging
 import yldprolog.engine
 from yldprolog.engine import get_value, to_python, unify
 from cfck.exception import CfckException
+from cfck.base_analyzer import BaseAnalyzer
+from cfck.finding_analyzer import FindingAnalyzer
 
 
 logger = logging.getLogger(__name__)
 
-class SarifAnalyzer:
+class SarifAnalyzer(BaseAnalyzer, FindingAnalyzer):
 
     def __init__(self, ctx):
-        self.query_engine = yldprolog.engine.YP()
-        self.set_prolog_base_functions()
+        super().__init__(ctx)
         self.sarif_file = None
         self.path = None
 
+    def choose_renderer(self, ctx):
+        logger.debug(f'sarif.py: choose_renderer {super()}')
+        super().choose_renderer(ctx)
+
     def set_prolog_base_functions(self):
+        super().set_prolog_base_functions()
         self.query_engine.register_function('sarif_result', self.sarif_result)
         self.query_engine.register_function('sarif_locations', self.sarif_locations)
         self.query_engine.register_function('sarif_message', self.sarif_message)
         self.query_engine.register_function('sarif_level', self.sarif_level)
         self.query_engine.register_function('sarif_kind', self.sarif_kind)
-
-    def add_rules(self, compiled_rules):
-        self.query_engine.load_script_from_string(compiled_rules, overwrite=False)
 
     def parse_input(self, path):
         # TODO: sariffile set via *paths

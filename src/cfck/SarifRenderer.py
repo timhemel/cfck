@@ -160,6 +160,33 @@ sarif_result_updater = {
         'codeflow': sarif_update_codeflow,
 }
 
+
+def structured_sarif_finding(sarif_log, filename, query_vars):
+    '''query_vars is a list that contains functors'''
+    # TODO: decide whether filename is still needed
+    logger.debug(f'structured_sarif_finding: {filename}, {query_vars!r}')
+    result = Result(message=None)
+    for qv in query_vars:
+        if isinstance(qv,tuple):
+            key,values = qv
+            try:
+                log_upd = sarif_log_updater[key]
+                sarif_log = log_upd(sarif_log, values)
+            except KeyError:
+                pass
+            try:
+                res_upd = sarif_result_updater[key]
+                result = res_upd(result, values)
+            except KeyError:
+                logger.warn(f'structured_sarif_finding: no handler for key {key}')
+        else:
+            logger.warn(f'structured_sarif_finding: do not know how to handle query_value {qv!r}')
+    logger.debug(f'structured_sarif_finding: appending result {result}')
+    if result.message is not None:
+        sarif_log.runs[0].results.append(result)
+    return sarif_log
+
+
 def structured_sarif_finding(sarif_log, filename, query_vars):
     '''query_vars is a list that contains functors'''
     # TODO: decide whether filename is still needed
