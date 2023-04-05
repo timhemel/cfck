@@ -13,9 +13,6 @@ from .StdoutRenderer import StdoutRenderer
 from .SarifRenderer import SarifRenderer, sarif_finding, structured_sarif_finding
 from .exception import CfckException
 
-from .XMLAnalyzer import XMLAnalyzer
-from .SarifAnalyzer import SarifAnalyzer
-
 logger = logging.getLogger(__name__)
 
 
@@ -84,29 +81,30 @@ def check_module_path(path):
 
 def get_analyzer_module(analyzer):
     # get analyzer from a file
+    logger.debug(f'get_analyzer_module: searching for analyzer {analyzer}')
     module_path = check_module_path(pathlib.Path(analyzer))
     if module_path is not None:
+        logger.debug(f'get_analyzer_module: found path {module_path}')
         return load_analyzer_module_from_path(module_path)
     # get it from the configured path
     cfck_module_path = os.environ.get('CFCK_ANALYZERS_PATH')
     if cfck_module_path is not None:
         for search_dir in cfck_module_path.split(':'):
+            logger.debug(f'get_analyzer_module: searching path {search_dir}')
             module_path = check_module_path(pathlib.Path(search_dir) / analyzer)
             if module_path is not None:
+                logger.debug(f'get_analyzer_module: found path {module_path}')
                 return load_analyzer_module_from_path(module_path)
     # get it from the built-in path
     try:
         module = importlib.import_module(f'cfck.analysis.{analyzer}')
+        logger.debug(f'get_analyzer_module: found module cfck.analysis.{analyzer}')
         return module
-    except ModuleNotFoundError:
+    except ModuleNotFoundError as e:
+        logger.debug(f'get_analyzer_module: could not load module cfck.analysis.{analyzer}: {e}')
         pass
     return None
 
-
-analyzers = {
-        'xml': XMLAnalyzer,
-        'sarif': SarifAnalyzer
-    }
 
 @click.command()
 @click.pass_context

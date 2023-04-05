@@ -5,7 +5,7 @@ from defusedxml.common import DefusedXmlException
 import logging
 import yldprolog.engine
 from yldprolog.engine import get_value, to_python, unify
-from .exception import CfckException
+from cfck.exception import CfckException
 
 
 logger = logging.getLogger(__name__)
@@ -149,3 +149,6 @@ class XMLAnalyzer:
         if v2 >= v1:
             yield False
 
+def create_analyzer(ctx):
+    return XMLAnalyzer(ctx)
+    pass

@@ -4,7 +4,7 @@ from sarif.sarif_file import SarifFile
 import logging
 import yldprolog.engine
 from yldprolog.engine import get_value, to_python, unify
-from .exception import CfckException
+from cfck.exception import CfckException
 
 
 logger = logging.getLogger(__name__)
@@ -137,3 +137,5 @@ class SarifAnalyzer:
         if v2 >= v1:
             yield False
 
+def create_analyzer(ctx):
+    return SarifAnalyzer(ctx)
