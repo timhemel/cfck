@@ -3,7 +3,7 @@ import sarif
 from sarif.sarif_file import SarifFile
 import logging
 import yldprolog.engine
-from yldprolog.engine import get_value, to_python, unify
+from yldprolog.engine import get_value, to_python, unify, Variable
 from cfck.exception import CfckException
 from cfck.base_analyzer import BaseAnalyzer
 from cfck.finding_analyzer import FindingAnalyzer
@@ -50,6 +50,13 @@ class SarifAnalyzer(BaseAnalyzer, FindingAnalyzer, SingleFileAnalyzer):
     def set_path(self, path):
         self.path = path
 
+    def enumerate_results(self, result_index):
+        if isinstance(result_index.get_value(), Variable):
+            return enumerate(self.results)
+        else:
+            idx = to_python(result_index)
+            return [(idx, self.results[idx])]
+
     def sarif_locations_to_prolog(self, locations):
         def location_to_prolog(location):
             logger.debug(f'{location=}')
@@ -75,7 +82,7 @@ class SarifAnalyzer(BaseAnalyzer, FindingAnalyzer, SingleFileAnalyzer):
 
     def sarif_result(self, result_index, rule):
         logger.debug(f'sarif_result')
-        for index, result in enumerate(self.results):
+        for index, result in self.enumerate_results(result_index):
             logger.debug(f'sarif_result: {index},{result=}')
             for y in unify(result_index, self.query_engine.atom(index)):
                 rule_id = result['ruleId']
@@ -86,7 +93,8 @@ class SarifAnalyzer(BaseAnalyzer, FindingAnalyzer, SingleFileAnalyzer):
 
     def sarif_locations(self, result_index, locations):
         logger.debug(f'sarif_locations')
-        for index, result in enumerate(self.results):
+        logger.debug(f'sarif_locations: {self.results[0]}')
+        for index, result in self.enumerate_results(result_index):
             logger.debug(f'sarif_locations: {index},{result=}')
             for y in unify(result_index, self.query_engine.atom(index)):
                 locs = self.sarif_locations_to_prolog(result['locations'])
@@ -95,8 +103,8 @@ class SarifAnalyzer(BaseAnalyzer, FindingAnalyzer, SingleFileAnalyzer):
                     yield False
 
     def sarif_message(self, result_index, message):
-        logger.debug(f'sarif_message')
-        for index, result in enumerate(self.results):
+        logger.debug(f'sarif_message {to_python(result_index)}')
+        for index, result in self.enumerate_results(result_index):
             logger.debug(f'sarif_message: {index},{result=}')
             for y in unify(result_index, self.query_engine.atom(index)):
                 # TODO:decide how to handle formatting
@@ -106,7 +114,7 @@ class SarifAnalyzer(BaseAnalyzer, FindingAnalyzer, SingleFileAnalyzer):
 
     def sarif_kind(self, result_index, kind):
         logger.debug(f'sarif_kind')
-        for index, result in enumerate(self.results):
+        for index, result in self.enumerate_results(result_index):
             logger.debug(f'sarif_kind: {index},{result=}')
             for y in unify(result_index, self.query_engine.atom(index)):
                 knd = result.get('kind', 'fail')
@@ -115,7 +123,7 @@ class SarifAnalyzer(BaseAnalyzer, FindingAnalyzer, SingleFileAnalyzer):
 
     def sarif_level(self, result_index, level):
         logger.debug(f'sarif_level')
-        for index, result in enumerate(self.results):
+        for index, result in self.enumerate_results(result_index):
             logger.debug(f'sarif_level: {index},{result=}')
             for y in unify(result_index, self.query_engine.atom(index)):
                 lvl = result.get('level', 'warning')
