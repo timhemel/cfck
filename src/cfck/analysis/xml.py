@@ -1,3 +1,4 @@
+import re
 import lxml
 from lxml import etree
 from defusedxml import ElementTree as defused_etree
@@ -48,6 +49,8 @@ class XMLAnalyzer(BaseAnalyzer, FindingAnalyzer, SingleFileAnalyzer):
         self.query_engine.register_function('nodelocation', self.node_location)
         self.query_engine.register_function('lowercase', self.lowercase)
         self.query_engine.register_function('version_at_least', self.version_at_least)
+        self.query_engine.register_function('stringmatch', self.string_match)
+        self.query_engine.register_function('istringmatch', self.istring_match)
 
     def parse_input(self, path):
         try:
@@ -151,6 +154,20 @@ class XMLAnalyzer(BaseAnalyzer, FindingAnalyzer, SingleFileAnalyzer):
         v1 = to_python(version1).split('.')
         v2 = to_python(version2).split('.')
         if v2 >= v1:
+            yield False
+
+    def string_match(self, text, pattern):
+        # assume that text and pattern are instantiated
+        text_value = to_python(text)
+        pattern_value = to_python(pattern)
+        if re.search(pattern_value, text_value):
+            yield False
+
+    def istring_match(self, text, pattern):
+        # assume that text and pattern are instantiated
+        text_value = to_python(text)
+        pattern_value = to_python(pattern)
+        if re.search(pattern_value, text_value, re.IGNORECASE):
             yield False
 
 def create_analyzer(ctx):
