@@ -119,6 +119,8 @@ def sarif_update_message(sarifresult, values):
         text = values[0].format(*values[1])
     except KeyError:
         text = values[0]
+    except ValueError:
+        text = values[0]
     sarifresult.message = Message(text=text)
     return sarifresult
 

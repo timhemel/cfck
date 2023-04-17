@@ -27,6 +27,8 @@ def structured_quickfix_finding(filename, query_vars):
         message_string = message[0].format(*message[1])
     except KeyError:
         message_string = message[0]
+    except ValueError:
+        message_string = message[0]
     logger.debug(f'structured_quickfix_finding: locs = {qv_dict.get("locations")}')
     locs = qv_dict.get('locations', [[]])[0]
     locations = [ f'{path}:{startloc[0]}:{startloc[1]}' for path, startloc, endloc in locs ]
