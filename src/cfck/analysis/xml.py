@@ -28,7 +28,9 @@ class XMLAnalyzer(BaseAnalyzer, FindingAnalyzer, SingleFileAnalyzer):
     def __init__(self, ctx):
         super().__init__(ctx)
         self.xml_tree = None
-        self.insecure = ctx.params['options'].get('insecure',False)
+        self.insecure = False
+        if ctx.params['option']:
+            self.insecure = ctx.params['option'][0] == 'insecure'
         self.path = None
 
     def choose_renderer(self, ctx):
