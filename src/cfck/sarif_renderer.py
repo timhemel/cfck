@@ -6,7 +6,7 @@ from attrs import asdict
 from attrs import has, fields
 import cattrs
 from cattrs.gen import make_dict_unstructure_fn, override
-from sarif_om import SarifLog, Run, Tool, ToolComponent, Result, PhysicalLocation, ArtifactLocation, Region, ReportingDescriptor, Message, CodeFlow, ThreadFlow
+from sarif_om import SarifLog, Run, Tool, ToolComponent, Result, Location, PhysicalLocation, ArtifactLocation, ThreadFlowLocation, Region, ReportingDescriptor, Message, CodeFlow, ThreadFlow
 
 from .BaseRenderer import BaseRenderer
 
@@ -64,11 +64,12 @@ class SarifRenderer(BaseRenderer):
         print(json.dumps(renamed_log))
 
 
-def sarif_location(path, startloc, endloc):
+def sarif_location(path, startloc, endloc, message=None):
     logger.debug(f'sarif_location: {path=}, {startloc=}, {endloc=}')
     region = Region(start_line=startloc[0], start_column=startloc[1], end_line=endloc[0], end_column=endloc[1], byte_offset=None, char_offset=None)
-    artifact_location = ArtifactLocation(uri=path, index=None)
-    loc = { 'physicalLocation': PhysicalLocation(artifact_location=artifact_location, region=region) }
+    artifact_location = ArtifactLocation(uri=path, index=None, uri_base_id='%SRCROOT%')
+    phys_loc = PhysicalLocation(artifact_location=artifact_location, region=region)
+    loc = Location(id=None, physical_location=phys_loc, message=message)
     logger.debug(f'sarif_location: {loc=}')
     return loc
 
@@ -134,14 +135,13 @@ def sarif_update_locations(sarifresult, values):
 
 def sarif_update_codeflow(sarifresult, values):
     '''codeflow(Locations), where Locations is a list of lists:
-    [ [FileName,[StartLine,StartCol],[EndLine,EndCol]], ... ]
+    [ [[FileName,[StartLine,StartCol],[EndLine,EndCol]], Message], ... ]
 
     Only supports one codeflow, with one threadflow. To add more flows, use
-    this functor more than once. Does not support messages with the locations,
-    threadflows or codeflow.
+    this functor more than once. Supports messages with the locations.
     '''
-    # TODO: supports only locations, no messages
-    locations = [ sarif_location(*loc) for loc in values[0] ]
+    locations = [ ThreadFlowLocation(execution_order=None, importance=None, index=None,
+            location=sarif_location(*loc, message=Message(text=msg))) for loc,msg in values[0] ]
     threadflow = ThreadFlow(locations=locations)
     if sarifresult.code_flows is None:
         sarifresult.code_flows = []

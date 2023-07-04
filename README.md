@@ -44,7 +44,7 @@ The argument of `q` is a list of Prolog functors containing values. The reporter
 | kind(Kind)  | result| Kind is a string representing a valid SARIF kind | quickfix translates this |
 | message(Message,Args)  | result| Message is a message template containing placeholders, in which the values of Args are substituted | |
 | locations(Locations)  | result| Locations is a list of lists: `[ [FileName,[StartLine,StartCol],[EndLine,EndCol]], ... ]` | quickfix uses the first location |
-| codeflow(Locations)  | result| Locations is a list of lists: `[ [FileName,[StartLine,StartCol],[EndLine,EndCol]], ... ]` | Not supported in quickfix. Only supports one codeflow, with one threadflow. To add more flows, use this functor more than once. Does not support messages with the locations, threadflows or codeflow. |
+| codeflow(Locations)  | result| Locations is a list of lists: `[ [[FileName,[StartLine,StartCol],[EndLine,EndCol]],Message], ... ]` | Not supported in quickfix. Only supports one codeflow, with one threadflow. To add more flows, use this functor more than once. Supports messages with the locations. |
 
 
 
