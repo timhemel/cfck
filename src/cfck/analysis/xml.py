@@ -48,6 +48,7 @@ class XMLAnalyzer(BaseAnalyzer, FindingAnalyzer, SingleFileAnalyzer):
         self.query_engine.register_function('optional_attr', self.optional_attr)
         self.query_engine.register_function('nodelocation', self.node_location)
         self.query_engine.register_function('lowercase', self.lowercase)
+        self.query_engine.register_function('integer_add', self.integer_add)
         self.query_engine.register_function('version_at_least', self.version_at_least)
         self.query_engine.register_function('stringmatch', self.string_match)
         self.query_engine.register_function('istringmatch', self.istring_match)
@@ -147,6 +148,14 @@ class XMLAnalyzer(BaseAnalyzer, FindingAnalyzer, SingleFileAnalyzer):
         # val1 must be instantiated
         v = self.query_engine.atom(to_python(val1).lower())
         for x in unify(val2, v):
+            yield False
+
+    def integer_add(self, num1, num2, num3):
+        # num1 and num2 must be instantiated
+        num1_v = int(to_python(num1))
+        num2_v = int(to_python(num2))
+        sum = self.query_engine.atom(to_python(num1_v + num2_v))
+        for x in unify(num3, sum):
             yield False
 
     def version_at_least(self, version1, version2):
