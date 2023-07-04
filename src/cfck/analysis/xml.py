@@ -52,6 +52,7 @@ class XMLAnalyzer(BaseAnalyzer, FindingAnalyzer, SingleFileAnalyzer):
         self.query_engine.register_function('version_at_least', self.version_at_least)
         self.query_engine.register_function('stringmatch', self.string_match)
         self.query_engine.register_function('istringmatch', self.istring_match)
+        self.query_engine.register_function('string_replace', self.string_replace)
 
     def parse_input(self, path):
         try:
@@ -177,6 +178,17 @@ class XMLAnalyzer(BaseAnalyzer, FindingAnalyzer, SingleFileAnalyzer):
         text_value = to_python(text)
         pattern_value = to_python(pattern)
         if re.search(pattern_value, text_value, re.IGNORECASE):
+            yield False
+
+    def string_replace(self, source, pattern, replacement, destination):
+        '''destination is source with pattern replaced with replacement'''
+        # assume that source and pattern and replacement are instantiated
+        source_v = str(to_python(source))
+        pattern_v = str(to_python(pattern))
+        replacement_v = str(to_python(replacement))
+        dest_v = source_v.replace(pattern_v, replacement_v)
+        dest_a = self.query_engine.atom(dest_v)
+        for x in unify(destination, dest_a):
             yield False
 
 def create_analyzer(ctx):
