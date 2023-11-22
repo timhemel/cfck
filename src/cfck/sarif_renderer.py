@@ -52,7 +52,7 @@ class SarifRenderer(BaseRenderer):
 
     def add_rules(self):
         for run in self.sarif_log.runs:
-            rule_ids = sorted([result.rule_id for result in run.results ])
+            rule_ids = sorted(set(result.rule_id for result in run.results))
             run.tool.driver.rules = [ ReportingDescriptor(id=rid, name=rid) for rid in rule_ids ]
             for result in run.results:
                 rule_index = bisect.bisect_left(rule_ids, result.rule_id)
