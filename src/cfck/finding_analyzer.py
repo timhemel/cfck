@@ -30,4 +30,7 @@ class FindingAnalyzer:
         self.renderer = choose_finding_renderer(outformat)
         if self.renderer is None:
             raise CfckException(f'Renderer {outformat} is not supported by this analyzer.')
+        outfile = ctx.params['outfile']
+        if outfile is not None:
+            self.renderer.outstream = outfile.open('w')
 

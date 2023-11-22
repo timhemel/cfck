@@ -49,6 +49,6 @@ class StdoutRenderer(BaseRenderer):
         for finding_vars in iterator:
             s = self.render_func(filename, finding_vars)
             if s is not None:
-                print(s)
+                self.write(s,end='\n')
 
 

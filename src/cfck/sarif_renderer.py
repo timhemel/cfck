@@ -61,7 +61,7 @@ class SarifRenderer(BaseRenderer):
     def end(self):
         self.add_rules()
         renamed_log = clear_none_values(converter.unstructure(self.sarif_log))
-        print(json.dumps(renamed_log))
+        self.write(json.dumps(renamed_log))
 
 
 def sarif_location(path, startloc, endloc, message=None):

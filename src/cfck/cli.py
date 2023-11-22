@@ -73,13 +73,14 @@ def get_analyzer_module(analyzer):
 @click.option('-r','--rules', type=click.Path(path_type=pathlib.Path))
 @click.option('-d','--debug', type=bool, is_flag=True, default=False)
 @click.option('-f', '--outformat', default='vim')
-@click.option('-o', '--option', multiple=True)
+@click.option('-O', '--option', multiple=True)
+@click.option('-o','--outfile', type=click.Path(path_type=pathlib.Path))
 #@click.option('--vim', 'outformat', is_flag=True, flag_value='vim', default=True)
 #@click.option('--sarif', 'outformat', is_flag=True, flag_value='sarif')
 #@click.option('--plain', 'outformat', is_flag=True, flag_value='plain')
 #@click.option('--secure/--insecure', default=True, help="validate or don't validate XML with defusedxml")
 @click.argument('inputs', nargs=-1, type=click.Path(path_type=pathlib.Path))
-def analyze(ctx, analyzer, rules, debug, outformat, option, inputs):
+def analyze(ctx, analyzer, rules, debug, outformat, option, outfile, inputs):
 
     if debug:
         logging.basicConfig(level=logging.DEBUG)
@@ -103,6 +104,7 @@ def analyze(ctx, analyzer, rules, debug, outformat, option, inputs):
     #analysis.renderer = renderer
     analysis.run(inputs)
     return
+    #--------
 
     renderer.begin()
 
