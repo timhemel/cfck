@@ -207,7 +207,8 @@ def structured_sarif_finding(sarif_log, filename, query_vars):
                 res_upd = sarif_result_updater[key]
                 result = res_upd(result, values)
             except KeyError:
-                logger.warn(f'structured_sarif_finding: no handler for key {key}')
+                if key not in sarif_log_updater:
+                    logger.warn(f'structured_sarif_finding: no handler for key {key}')
         else:
             logger.warn(f'structured_sarif_finding: do not know how to handle query_value {qv!r}')
     logger.debug(f'structured_sarif_finding: appending result {result}')
