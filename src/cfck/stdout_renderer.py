@@ -24,7 +24,8 @@ def structured_quickfix_finding(filename, query_vars):
 
     message = qv_dict.get('message',('',[])) # format(*query_vars[4:])
     try:
-        message_string = message[0].format(*message[1])
+        escaped_message_string = message[0].replace('{','{{').replace('}','}}')
+        message_string = escaped_message_string.format(*message[1])
     except KeyError:
         message_string = message[0]
     except ValueError:
@@ -39,7 +40,8 @@ def structured_quickfix_finding(filename, query_vars):
 def render_plain(filename, finding_vars):
     # line = finding_vars[1].sourceline
     logger.debug(f'render_plain: {filename=}, {finding_vars=}')
-    message = finding_vars[0].format(*finding_vars[1:])
+    escaped_message_string = finding_vars[0].replace('{','{{').replace('}','}}')
+    message = escaped_message_string.format(*finding_vars[1:])
     return message
 
 

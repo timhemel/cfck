@@ -117,7 +117,8 @@ def sarif_update_message(sarifresult, values):
     '''message(Message,Args), where Message is a message template containing placeholders, in which the values of Args are substituted'''
     # TODO: support more complex message formats (templates, markdown, etc)
     try:
-        text = values[0].format(*values[1])
+        escaped_message_string = values[0].replace('{','{{').replace('}','}}')
+        text = escaped_message_string.format(*values[1])
     except KeyError:
         text = values[0]
     except ValueError:
